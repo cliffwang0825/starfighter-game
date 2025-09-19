@@ -17,12 +17,16 @@ export class DebriefScene {
     this.starfield.update(dt);
 
     if (this.game.input.consumeConfirm()) {
+      this.game.audio.setMusicStage(0);
       this.game.setScene(new GameplayScene(this.game));
       return;
     }
 
     if (this.game.input.wasKeyPressed("Escape")) {
       this.game.setScene(new TitleScene(this.game));
+    }
+    if (this.game.input.wasKeyPressed("KeyM")) {
+      this.game.audio.toggleMute();
     }
   }
 

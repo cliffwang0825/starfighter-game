@@ -1,3 +1,4 @@
+import { AudioManager } from "./audio.js";
 import { InputManager } from "./input.js";
 import { GameStorage } from "./storage.js";
 import { TitleScene } from "./scenes/titleScene.js";
@@ -12,6 +13,7 @@ export class Game {
     this.height = canvas.clientHeight;
     this.dpr = window.devicePixelRatio || 1;
     this.storage = new GameStorage();
+    this.audio = new AudioManager();
     this.input = new InputManager(canvas);
     this.scene = null;
     this._lastTime = performance.now();

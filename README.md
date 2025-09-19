@@ -1,6 +1,6 @@
 # Starfighter Game
 
-Starfighter is a responsive vertical scrolling shooter that runs entirely in the browser. The project targets 60 FPS with device-pixel-ratio aware rendering so the action looks crisp on desktops, tablets, and phones. Keyboard controls work out of the box, while touch players can drag anywhere on the screen to steer and fire.
+Starfighter is a responsive vertical scrolling shooter that runs entirely in the browser. The project targets 60 FPS with device-pixel-ratio aware rendering so the action looks crisp on desktops, tablets, and phones. Keyboard controls work out of the box, while touch players can drag anywhere on the screen to steer and fire. Boss encounters, screen-clearing bombs, and collectible power-ups build an arcade-style loop that scales in difficulty across multiple sectors.
 
 ## Project Structure
 
@@ -39,19 +39,23 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 
 | Platform | Action |
 | --- | --- |
-| Keyboard | WASD / Arrow keys to move, Space or Enter to fire and confirm |
-| Touch & Mouse | Tap or drag anywhere on the play field to move and auto-fire |
+| Keyboard | WASD / Arrow keys to move, Space or Enter to fire, **X / B / Shift** to deploy a bomb, Enter / Space to confirm |
+| Touch & Mouse | Drag to steer and fire, double-tap to drop a bomb, tap to confirm |
+| All | Press **M** to toggle music and SFX |
 
 ## Performance & UX Features
 
 - **60 FPS fixed timestep** keeps the simulation stable and smooth even on variable refresh rates.
 - **Device pixel ratio scaling** renders to high-resolution canvases for crisp visuals on Retina/HiDPI screens.
 - **Responsive layout** adapts the canvas to portrait or landscape orientations up to tablet-sized viewports.
-- **Touch-friendly gestures** leverage pointer events with subtle smoothing for accurate mobile control.
+- **Touch-friendly gestures** leverage pointer events with subtle smoothing for accurate mobile control, including a double-tap bomb gesture on phones and tablets.
+- **Boss escalations & level theming** cycle through changing nebula palettes, background starfields, and multi-phase boss ships that echo Star Wars-inspired silhouettes with metallic specular highlights.
+- **Power-ups and bombs** introduce screen-clearing ordnance, shield boosts, speed bursts, and spread cannons to help players survive three hits per life across three lives.
+- **Soundtrack and SFX** are synthesised at runtime with a mute toggle, and can be replaced with licensed audio assets.
 - **Persistent best score** stored locally so high scores survive reloads.
 
 ## Assets and Licensing
 
-The repository ships with placeholder README files inside `assets/images/` and `assets/sounds/`. Replace them with your own sprites and audio for a richer presentation. Recommended sources include [OpenGameArt](https://opengameart.org/) and [Kenney.nl](https://kenney.nl/assets), which provide assets under permissive licenses.
+The repository ships with placeholder README files inside `assets/images/` and `assets/sounds/`. Replace them with your own painted or pre-rendered sprites, multi-frame boss components, and looping audio for a richer presentation. Recommended sources include [OpenGameArt](https://opengameart.org/) and [Kenney.nl](https://kenney.nl/assets), which provide assets under permissive licenses.
 
 When adding third-party resources, document attribution requirements here and ensure the licenses allow redistribution in a browser game.

@@ -12,7 +12,12 @@ export class TitleScene {
     this.time += dt;
     this.starfield.update(dt);
     if (this.game.input.consumeConfirm()) {
+      this.game.audio.resume();
+      this.game.audio.setMusicStage(0);
       this.game.setScene(new GameplayScene(this.game));
+    }
+    if (this.game.input.wasKeyPressed("KeyM")) {
+      this.game.audio.toggleMute();
     }
   }
 

@@ -1,10 +1,11 @@
 export class Explosion {
-  constructor(x, y, color = "#ffd166") {
+  constructor(x, y, color = "#ffd166", radius = 26) {
     this.x = x;
     this.y = y;
     this.color = color;
     this.life = 0.45;
     this.elapsed = 0;
+    this.baseRadius = radius;
   }
 
   update(dt) {
@@ -14,7 +15,7 @@ export class Explosion {
 
   render(ctx) {
     const progress = Math.min(1, this.elapsed / this.life);
-    const radius = 12 + progress * 26;
+    const radius = 12 + progress * this.baseRadius;
     const opacity = 1 - progress;
     const gradient = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
     gradient.addColorStop(0, `rgba(255, 255, 255, ${0.9 * opacity})`);

@@ -25,7 +25,9 @@ export class InputManager {
     this.framePointerRelease = false;
     this.pointerTap = false;
     this.framePointerTap = false;
+    this.doubleTap = false;
     this._pointerIdentifier = null;
+    this._lastTapTime = 0;
 
     window.addEventListener("keydown", (event) => {
       if (event.repeat) return;
@@ -92,6 +94,14 @@ export class InputManager {
     this.pendingPointerPress = false;
     this.pendingPointerRelease = false;
     this.framePointerTap = this.pointerTap;
+    this.doubleTap = false;
+    if (this.pointerTap) {
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      if (now - this._lastTapTime < 280) {
+        this.doubleTap = true;
+      }
+      this._lastTapTime = now;
+    }
     this.pointerTap = false;
   }
 
@@ -118,6 +128,14 @@ export class InputManager {
   consumeTap() {
     if (this.framePointerTap) {
       this.framePointerTap = false;
+      return true;
+    }
+    return false;
+  }
+
+  consumeDoubleTap() {
+    if (this.doubleTap) {
+      this.doubleTap = false;
       return true;
     }
     return false;
