@@ -5,7 +5,7 @@ const BOSS_TYPES = [
   {
     id: "vanguard",
     health: 120,
-    radius: 88,
+    radius: 66,
     palette: {
       hull: "#0d141e",
       trim: "#2f74c8",
@@ -44,7 +44,7 @@ const BOSS_TYPES = [
   {
     id: "hangar",
     health: 160,
-    radius: 104,
+    radius: 78,
     palette: {
       hull: "#090b12",
       trim: "#1d3a5f",
@@ -114,7 +114,7 @@ const BOSS_TYPES = [
   {
     id: "sentinel",
     health: 220,
-    radius: 120,
+    radius: 90,
     palette: {
       hull: "#05070c",
       trim: "#1a2840",
@@ -173,10 +173,27 @@ const BOSS_TYPES = [
   },
 ];
 
+const BOSS_COLOR_VARIANTS = [
+  { hull: "#361218", trim: "#ff5a63", accent: "#ffb3a2", glow: "#ffd4c6" },
+  { hull: "#d9dde4", trim: "#f7f8fb", accent: "#ffffff", glow: "#f0f4ff" },
+  { hull: "#2d153f", trim: "#8e6dff", accent: "#d9baff", glow: "#f6e7ff" },
+  { hull: "#0d141e", trim: "#2f74c8", accent: "#58b0ff", glow: "#93d8ff" },
+  { hull: "#3b2a07", trim: "#c99a1c", accent: "#ffd96d", glow: "#ffe7ab" },
+];
+
+let bossColorIndex = 0;
+
+export function resetBossPaletteCycle() {
+  bossColorIndex = 0;
+}
+
 export class Boss {
   constructor(game, stageIndex) {
     this.game = game;
-    this.definition = BOSS_TYPES[stageIndex % BOSS_TYPES.length];
+    const definition = BOSS_TYPES[stageIndex % BOSS_TYPES.length];
+    const paletteVariant = BOSS_COLOR_VARIANTS[bossColorIndex % BOSS_COLOR_VARIANTS.length];
+    bossColorIndex += 1;
+    this.definition = { ...definition, palette: paletteVariant };
     this.maxHealth = this.definition.health;
     this.health = this.definition.health;
     this.radius = this.definition.radius;
@@ -422,6 +439,7 @@ function renderSentinel(ctx, boss) {
 
 function renderBackdrop(ctx, boss) {
   ctx.save();
+  const paletteGlow = boss.definition?.palette?.glow;
   const gradient = ctx.createRadialGradient(
     boss.x,
     boss.y,
@@ -430,9 +448,24 @@ function renderBackdrop(ctx, boss) {
     boss.y,
     boss.radius * 2.6,
   );
-  gradient.addColorStop(0, "rgba(40, 80, 130, 0.45)");
+  gradient.addColorStop(0, paletteGlow ? hexToRgba(paletteGlow, 0.45) : "rgba(40, 80, 130, 0.45)");
   gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, boss.game.width, boss.game.height);
   ctx.restore();
+}
+
+function hexToRgba(hex, alpha) {
+  const normalized = hex.replace("#", "");
+  const value = normalized.length === 3
+    ? normalized
+        .split("")
+        .map((char) => char + char)
+        .join("")
+    : normalized;
+  const intVal = parseInt(value, 16);
+  const r = (intVal >> 16) & 0xff;
+  const g = (intVal >> 8) & 0xff;
+  const b = intVal & 0xff;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

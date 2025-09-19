@@ -4,12 +4,12 @@ import { updateBullets, renderBullets } from "../entities/bullet.js";
 import { Enemy } from "../entities/enemy.js";
 import { Player } from "../entities/player.js";
 import { PowerUp } from "../entities/powerup.js";
-import { Boss } from "../entities/bosses.js";
+import { Boss, resetBossPaletteCycle } from "../entities/bosses.js";
 import { distanceSquared, randChoice, randRange } from "../utils.js";
 import { DebriefScene } from "./debriefScene.js";
 
 const PLAYER_MAX_LIVES = 3;
-const COLLISION_RADIUS = 32;
+const COLLISION_RADIUS = 24;
 const HEALTH_PER_LIFE = 3;
 const BOMB_DAMAGE = 18;
 const BOMB_COOLDOWN = 0.8;
@@ -56,6 +56,7 @@ export class GameplayScene {
     this.spawnDelay = 2;
     this.boss = null;
     this.bossWarningTimer = 0;
+    this.bossSpawned = false;
     this.bombTimer = 0;
     this.bombFlashTimer = 0;
 
@@ -65,6 +66,7 @@ export class GameplayScene {
     this.effects = [];
     this.powerUps = [];
 
+    resetBossPaletteCycle();
     this.starfield.setPalette(STAGES[this.stageIndex].palette);
     this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay);
     this.game.audio.setMusicStage(0);
@@ -90,7 +92,7 @@ export class GameplayScene {
     }
 
     this.waveTimer += dt;
-    if (!this.boss && this.waveTimer >= this.spawnDelay) {
+    if (!this.boss && this.stageTime < 30 && this.waveTimer >= this.spawnDelay) {
       this.waveTimer = 0;
       this.spawnWave();
       this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay);
@@ -131,6 +133,7 @@ export class GameplayScene {
       this.bossWarningTimer = 3;
       this.game.audio.playBossWarning();
       this.game.audio.setMusicStage(this.stageIndex + 1);
+      this.bossSpawned = true;
       this.boss = new Boss(this.game, this.stageIndex);
     }
 
@@ -214,12 +217,7 @@ export class GameplayScene {
   }
 
   shouldSummonBoss() {
-    const stage = STAGES[this.stageIndex];
-    return (
-      !this.boss &&
-      (this.stageTime >= stage.duration || this.score >= stage.scoreThreshold) &&
-      this.enemies.length === 0
-    );
+    return !this.boss && !this.bossSpawned && this.stageTime >= 30 && this.enemies.length === 0;
   }
 
   advanceStage() {
@@ -230,6 +228,7 @@ export class GameplayScene {
     this.spawnDelay = randRange(...stage.spawnDelay);
     this.starfield.setPalette(stage.palette);
     this.game.audio.setMusicStage(this.stageIndex);
+    this.bossSpawned = false;
   }
 
   dropBossRewards() {
@@ -461,7 +460,7 @@ export class GameplayScene {
             this.game.audio.playExplosion(0.5);
             if (enemy.dropType) {
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: enemy.dropType }));
-            } else if (Math.random() < 0.08) {
+            } else if (Math.random() < 0.032) {
               const types = ["bomb", "spread", "speed", "shield"];
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: randChoice(types) }));
             }
@@ -601,7 +600,7 @@ export class GameplayScene {
     for (let i = 0; i < this.playerLives; i += 1) {
       ctx.save();
       ctx.translate(i * (iconSize + 16), 16);
-      ctx.scale(iconSize / 22, iconSize / 22);
+      ctx.scale(iconSize / 16.5, iconSize / 16.5);
       ctx.fillStyle = "#d51928";
       ctx.beginPath();
       ctx.moveTo(0, -18);

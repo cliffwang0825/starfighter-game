@@ -11,7 +11,7 @@ export class Enemy {
   constructor(config) {
     this.x = config.x;
     this.y = config.y;
-    this.radius = config.radius ?? 20;
+    this.radius = config.radius ?? 15;
     this.speedY = config.speedY ?? 110;
     this.amplitude = config.amplitude ?? 0;
     this.frequency = config.frequency ?? 0;
@@ -70,7 +70,7 @@ export class Enemy {
   render(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
-    const scale = this.radius / 20;
+    const scale = this.radius / 15;
 
     const hullGradient = ctx.createLinearGradient(0, -36 * scale, 0, 30 * scale);
     hullGradient.addColorStop(0, "#1b2635");

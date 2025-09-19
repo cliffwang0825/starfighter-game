@@ -3,7 +3,7 @@ import { clamp, lerp } from "../utils.js";
 export class Player {
   constructor(game) {
     this.game = game;
-    this.radius = 22;
+    this.radius = 16.5;
     this.baseSpeed = 340;
     this.speed = this.baseSpeed;
     this.maxHealth = 3;
@@ -171,7 +171,7 @@ export class Player {
   render(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
-    const scale = this.radius / 22;
+    const scale = this.radius / 16.5;
 
     if (this.isInvulnerable) {
       ctx.save();
