@@ -1,54 +1,57 @@
 # Starfighter Game
 
-Starfighter is a vertical scrolling shooter prototype created with Python and [pygame](https://www.pygame.org/). The project demonstrates a simple game loop, sprite-based actors, and scene management while leaving room for additional mechanics and polished artwork.
+Starfighter is a responsive vertical scrolling shooter that runs entirely in the browser. The project targets 60 FPS with device-pixel-ratio aware rendering so the action looks crisp on desktops, tablets, and phones. Keyboard controls work out of the box, while touch players can drag anywhere on the screen to steer and fire.
 
 ## Project Structure
 
 ```
 .
 ├── assets/
-│   ├── images/           # Placeholder for background, player, enemy, bullet sprites
-│   └── sounds/           # Placeholder for music and sound effects
-└── src/
-    ├── bullet.py         # Projectile behaviour for player and enemy shots
-    ├── enemy.py          # Enemy movement and shooting logic
-    ├── effects.py        # Transient visuals (explosions, etc.)
-    ├── game.py           # Pygame bootstrap and main loop
-    ├── main.py           # Entry point (run with `python -m src.main`)
-    ├── player.py         # Player ship controls and firing
-    └── scenes.py         # Title, gameplay, and game-over scenes with manager
+│   ├── images/           # Optional replacement art for player, enemy, bullet, and backdrop visuals
+│   └── sounds/           # Optional audio files for music and sound effects (to be wired into the web build)
+├── index.html            # Game entry page
+├── src/
+│   ├── effects/          # Visual extras such as the starfield and explosions
+│   ├── entities/         # Player, enemy, and projectile logic
+│   ├── scenes/           # Title, gameplay, and debrief state controllers
+│   ├── game.js           # Canvas management, main loop, and scene switching
+│   ├── input.js          # Keyboard + touch input abstraction
+│   ├── main.js           # Bootstraps the game in the browser
+│   ├── storage.js        # Best score persistence via localStorage
+│   └── utils.js          # Math helpers and randomisation utilities
+└── styles.css            # Responsive layout and presentation styles
 ```
 
-## Requirements
+## Getting Started
 
-- Python 3.10+
-- pygame 2.5+
+1. **Install dependencies** – None are required; the build uses modern browser features and plain ES modules.
+2. **Serve the project** – Launch any static file server from the repository root. A quick option is Python’s built-in server:
 
-Install the dependencies with pip:
+   ```bash
+   python -m http.server 8000
+   ```
 
-```bash
-python -m pip install -r requirements.txt
-```
+   Then open [http://localhost:8000](http://localhost:8000) in a desktop or mobile browser.
 
-## Running the Game
+3. **Play the game** – The title screen shows your best score. Tap, click, or press Space/Enter to deploy.
 
-1. Ensure that the required dependencies are installed.
-2. Optionally add licensed art and audio to the `assets/images/` and `assets/sounds/` folders.
-3. Start the game from the project root:
+## Controls
 
-```bash
-python -m src.main
-```
+| Platform | Action |
+| --- | --- |
+| Keyboard | WASD / Arrow keys to move, Space or Enter to fire and confirm |
+| Touch & Mouse | Tap or drag anywhere on the play field to move and auto-fire |
 
-### Controls
+## Performance & UX Features
 
-- Arrow keys or WASD: Move the player ship.
-- Space or Z: Fire bullets.
-- Enter/Space: Confirm prompts on title and debrief screens.
-- Escape: Return to the title screen or exit from the title.
-
-After launching you will see a title screen with control hints and the best score achieved during the session. Survive waves of enemies, earn points by defeating them, and collect a post-run debrief with your score and high score before diving back in.
+- **60 FPS fixed timestep** keeps the simulation stable and smooth even on variable refresh rates.
+- **Device pixel ratio scaling** renders to high-resolution canvases for crisp visuals on Retina/HiDPI screens.
+- **Responsive layout** adapts the canvas to portrait or landscape orientations up to tablet-sized viewports.
+- **Touch-friendly gestures** leverage pointer events with subtle smoothing for accurate mobile control.
+- **Persistent best score** stored locally so high scores survive reloads.
 
 ## Assets and Licensing
 
-The repository currently ships with placeholder text files in the `assets/` directory. Replace these with your own art and audio assets. Make sure any external resources you add are licensed for redistribution. Recommended sources include [OpenGameArt](https://opengameart.org/) and [Kenney.nl](https://kenney.nl/assets), which provide CC0 or permissive licenses suitable for hobby and commercial projects. Document any third-party asset usage and attribution requirements in this README.
+The repository ships with placeholder README files inside `assets/images/` and `assets/sounds/`. Replace them with your own sprites and audio for a richer presentation. Recommended sources include [OpenGameArt](https://opengameart.org/) and [Kenney.nl](https://kenney.nl/assets), which provide assets under permissive licenses.
+
+When adding third-party resources, document attribution requirements here and ensure the licenses allow redistribution in a browser game.

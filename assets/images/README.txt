@@ -1,7 +1,7 @@
-Place 2D sprite images for the game in this directory. Suggested files include:
-- background.png
+Place 2D sprite images for the web game in this directory. Suggested files include:
+- background.png (tiling or tall image for the scrolling backdrop)
 - player.png
 - enemy.png
 - bullet.png
 
-All assets should be licensed for redistribution and commercial use if necessary.
+For crisp rendering on high-DPR screens, consider providing images at 2x or 3x the logical canvas size. All assets should be licensed for redistribution and commercial use if necessary.
