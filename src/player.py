@@ -52,3 +52,12 @@ class Player(pygame.sprite.Sprite):
     def _create_bullet(self) -> Bullet:
         bullet_velocity = pygame.Vector2(0, -420)
         return Bullet(self.rect.midtop, bullet_velocity, (50, 200, 255), self.bounds)
+
+    def respawn(self, position: tuple[int, int]) -> None:
+        """Re-center the player without resetting other properties."""
+        self.position = pygame.Vector2(position)
+        self.rect.center = (int(self.position.x), int(self.position.y))
+
+    def set_alpha(self, alpha: int) -> None:
+        """Adjust sprite transparency for flicker effects."""
+        self.image.set_alpha(alpha)

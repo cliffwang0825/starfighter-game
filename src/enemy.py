@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from typing import Tuple
 
 import pygame
 
@@ -12,7 +13,13 @@ from .bullet import Bullet
 class Enemy(pygame.sprite.Sprite):
     """Basic enemy that drifts downward and occasionally shoots."""
 
-    def __init__(self, screen_rect: pygame.Rect) -> None:
+    def __init__(
+        self,
+        screen_rect: pygame.Rect,
+        *,
+        start_position: Tuple[int, int] | None = None,
+        speed: float | None = None,
+    ) -> None:
         super().__init__()
         self.image = pygame.Surface((32, 32), pygame.SRCALPHA)
         pygame.draw.polygon(
@@ -20,9 +27,12 @@ class Enemy(pygame.sprite.Sprite):
             (220, 60, 60),
             [(16, 0), (0, 28), (32, 28)],
         )
-        self.rect = self.image.get_rect(midtop=(random.randint(30, screen_rect.width - 30), -32))
+        if start_position:
+            self.rect = self.image.get_rect(midtop=start_position)
+        else:
+            self.rect = self.image.get_rect(midtop=(random.randint(30, screen_rect.width - 30), -32))
         self.position = pygame.Vector2(self.rect.topleft)
-        self.speed = random.uniform(80, 140)
+        self.speed = speed if speed is not None else random.uniform(80, 140)
         self.screen_rect = screen_rect
         self.fire_interval = random.uniform(1.0, 2.5)
         self.time_since_last_shot = random.uniform(0.0, self.fire_interval)

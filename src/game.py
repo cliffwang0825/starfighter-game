@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pygame
 
-from .scenes import GameplayScene, SceneManager
+from .scenes import SceneManager, TitleScene
 
 
 class Game:
@@ -16,7 +16,7 @@ class Game:
         pygame.display.set_caption("Starfighter")
         self.clock = pygame.time.Clock()
         self.scene_manager = SceneManager(self.screen)
-        self.scene_manager.push(GameplayScene(self.scene_manager))
+        self.scene_manager.push(TitleScene(self.scene_manager))
         self.running = True
 
     def run(self) -> None:

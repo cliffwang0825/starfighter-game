@@ -12,10 +12,11 @@ Starfighter is a vertical scrolling shooter prototype created with Python and [p
 └── src/
     ├── bullet.py         # Projectile behaviour for player and enemy shots
     ├── enemy.py          # Enemy movement and shooting logic
+    ├── effects.py        # Transient visuals (explosions, etc.)
     ├── game.py           # Pygame bootstrap and main loop
     ├── main.py           # Entry point (run with `python -m src.main`)
     ├── player.py         # Player ship controls and firing
-    └── scenes.py         # Scene manager and gameplay scene implementation
+    └── scenes.py         # Title, gameplay, and game-over scenes with manager
 ```
 
 ## Requirements
@@ -43,7 +44,10 @@ python -m src.main
 
 - Arrow keys or WASD: Move the player ship.
 - Space or Z: Fire bullets.
-- Escape: Quit to desktop when the game is over.
+- Enter/Space: Confirm prompts on title and debrief screens.
+- Escape: Return to the title screen or exit from the title.
+
+After launching you will see a title screen with control hints and the best score achieved during the session. Survive waves of enemies, earn points by defeating them, and collect a post-run debrief with your score and high score before diving back in.
 
 ## Assets and Licensing
 
