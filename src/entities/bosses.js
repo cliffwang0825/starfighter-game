@@ -23,17 +23,21 @@ const BOSS_TYPES = [
       );
       const bullets = [];
       if (boss.weaponTimer <= 0) {
-        boss.weaponTimer = 1.8;
+        boss.weaponTimer = scaledInterval(1.8, boss);
         const baseAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
-        for (let i = -1; i <= 1; i += 1) {
-          const angle = baseAngle + i * 0.2;
+        const volleyCount = scaledCount(3, boss);
+        const offset = -(volleyCount - 1) / 2;
+        for (let i = 0; i < volleyCount; i += 1) {
+          const angle = baseAngle + (offset + i) * 0.2;
           bullets.push(makeBossBullet(boss, angle, 260, 8));
         }
       }
-      if (boss.waveTimer >= 4.5) {
+      if (boss.waveTimer >= scaledInterval(4.5, boss)) {
         boss.waveTimer = 0;
-        for (let i = 0; i < 5; i += 1) {
-          const angle = Math.PI / 2 + (i - 2) * 0.18;
+        const waveCount = scaledCount(5, boss);
+        const offset = -(waveCount - 1) / 2;
+        for (let i = 0; i < waveCount; i += 1) {
+          const angle = Math.PI / 2 + (offset + i) * 0.18;
           bullets.push(makeBossBullet(boss, angle, 220, 6));
         }
       }
@@ -63,8 +67,8 @@ const BOSS_TYPES = [
       const bullets = [];
       const spawns = [];
       if (boss.weaponTimer <= 0) {
-        boss.weaponTimer = 1.2;
-        const arcs = 6;
+        boss.weaponTimer = scaledInterval(1.2, boss);
+        const arcs = Math.max(3, scaledCount(6, boss));
         for (let i = 0; i < arcs; i += 1) {
           const angle = Math.PI / 2 + (i / (arcs - 1) - 0.5) * 0.9;
           bullets.push(makeBossBullet(boss, angle, 300, 7));
@@ -72,20 +76,19 @@ const BOSS_TYPES = [
       }
       boss.secondaryTimer = (boss.secondaryTimer || 0) - dt;
       if (boss.secondaryTimer <= 0) {
-        boss.secondaryTimer = 2.4;
+        boss.secondaryTimer = scaledInterval(2.4, boss);
         const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
         bullets.push(makeBossBeam(boss, angle));
       }
       if (boss.spawnTimer <= 0) {
-        boss.spawnTimer = 6 + randRange(0, 2);
+        boss.spawnTimer = scaledInterval(6 + randRange(0, 2), boss);
         spawns.push(
-          new Enemy({
+          makeMinion(boss, {
             x: boss.x - 60,
             y: boss.y + 30,
             amplitude: 24,
             frequency: 2.5,
             fireCooldown: 1.4,
-            bounds: boss.game,
             health: 4,
             speedY: 140,
             scoreValue: 250,
@@ -93,17 +96,16 @@ const BOSS_TYPES = [
           }),
         );
         spawns.push(
-          new Enemy({
+          makeMinion(boss, {
             x: boss.x + 60,
             y: boss.y + 30,
             amplitude: 24,
             frequency: 2.5,
             fireCooldown: 1.4,
-            bounds: boss.game,
             health: 4,
             speedY: 140,
             scoreValue: 250,
-            dropType: randChoice(["bomb", "shield"]),
+            dropType: randChoice(["bomb", "shield", "laser"]),
           }),
         );
       }
@@ -134,35 +136,36 @@ const BOSS_TYPES = [
       const bullets = [];
       const spawns = [];
       if (boss.weaponTimer <= 0) {
-        boss.weaponTimer = 0.8;
-        const rings = 10;
+        boss.weaponTimer = scaledInterval(0.8, boss);
+        const rings = Math.max(6, scaledCount(10, boss));
         for (let i = 0; i < rings; i += 1) {
           const angle = (i / rings) * Math.PI * 2;
           bullets.push(makeBossBullet(boss, angle, 260 + randRange(-20, 20), 8));
         }
       }
       if (boss.secondaryTimer <= 0) {
-        boss.secondaryTimer = 3.2;
+        boss.secondaryTimer = scaledInterval(3.2, boss);
         const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
-        for (let i = -2; i <= 2; i += 1) {
-          bullets.push(makeBossBullet(boss, angle + i * 0.08, 320, 7));
+        const spreadCount = Math.max(1, scaledCount(5, boss));
+        const offset = -(spreadCount - 1) / 2;
+        for (let i = 0; i < spreadCount; i += 1) {
+          bullets.push(makeBossBullet(boss, angle + (offset + i) * 0.08, 320, 7));
         }
       }
       if (boss.spawnTimer <= 0) {
-        boss.spawnTimer = 7;
+        boss.spawnTimer = scaledInterval(7, boss);
         for (let i = -1; i <= 1; i += 2) {
           spawns.push(
-            new Enemy({
+            makeMinion(boss, {
               x: boss.x + i * 90,
               y: boss.y + 50,
               amplitude: 30,
               frequency: 2.8,
               fireCooldown: 1.1,
-              bounds: boss.game,
               health: 5,
               speedY: 120,
               scoreValue: 320,
-              dropType: randChoice(["bomb", "speed", "spread", "shield"]),
+              dropType: randChoice(["bomb", "speed", "spread", "shield", "laser"]),
             }),
           );
         }
@@ -188,14 +191,16 @@ export function resetBossPaletteCycle() {
 }
 
 export class Boss {
-  constructor(game, stageIndex) {
+  constructor(game, stageIndex, difficulty) {
     this.game = game;
     const definition = BOSS_TYPES[stageIndex % BOSS_TYPES.length];
     const paletteVariant = BOSS_COLOR_VARIANTS[bossColorIndex % BOSS_COLOR_VARIANTS.length];
     bossColorIndex += 1;
     this.definition = { ...definition, palette: paletteVariant };
-    this.maxHealth = this.definition.health;
-    this.health = this.definition.health;
+    this.difficulty = difficulty ?? {};
+    const diff = getDifficulty(this);
+    this.maxHealth = Math.max(1, Math.round(this.definition.health * diff.bossHealthMultiplier));
+    this.health = this.maxHealth;
     this.radius = this.definition.radius;
     this.x = game.width / 2;
     this.y = -this.radius * 1.4;
@@ -260,6 +265,41 @@ function makeBossBeam(boss, angle) {
     friendly: false,
     damage: 2,
   };
+}
+
+function getDifficulty(boss) {
+  return {
+    bossHealthMultiplier: boss.difficulty?.bossHealthMultiplier ?? 1,
+    bossFireRateMultiplier: boss.difficulty?.bossFireRateMultiplier ?? 1,
+    bossBulletMultiplier: boss.difficulty?.bossBulletMultiplier ?? 1,
+    enemyHealthMultiplier: boss.difficulty?.enemyHealthMultiplier ?? 1,
+    enemyFireRateMultiplier: boss.difficulty?.enemyFireRateMultiplier ?? 1,
+    enemyExtraProjectiles: boss.difficulty?.enemyExtraProjectiles ?? 0,
+  };
+}
+
+function scaledInterval(base, boss) {
+  const diff = getDifficulty(boss);
+  return base / diff.bossFireRateMultiplier;
+}
+
+function scaledCount(base, boss) {
+  const diff = getDifficulty(boss);
+  return Math.max(1, Math.round(base * diff.bossBulletMultiplier));
+}
+
+function makeMinion(boss, config) {
+  const diff = getDifficulty(boss);
+  const baseHealth = config.health ?? 3;
+  const baseBurst = config.burst ?? 1;
+  const baseCooldown = config.fireCooldown ?? 1.6;
+  return new Enemy({
+    ...config,
+    bounds: boss.game,
+    health: Math.max(1, Math.round(baseHealth * diff.enemyHealthMultiplier)),
+    burst: Math.max(1, Math.round(baseBurst + diff.enemyExtraProjectiles)),
+    fireCooldown: baseCooldown / diff.enemyFireRateMultiplier,
+  });
 }
 
 function renderVanguard(ctx, boss) {

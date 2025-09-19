@@ -33,13 +33,13 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 
    Then open [http://localhost:8000](http://localhost:8000) in a desktop or mobile browser.
 
-3. **Play the game** – The title screen shows your best score. Tap, click, or press Space/Enter to deploy.
+3. **Play the game** – The title screen shows your best score and lets you pick **Easy / Medium / Hard** before launching. Tap, click, or press Space/Enter to deploy once you have selected a difficulty.
 
 ## Controls
 
 | Platform | Action |
 | --- | --- |
-| Keyboard | WASD / Arrow keys to move, Space or Enter to fire, **X / B / Shift** to deploy a bomb, Enter / Space to confirm |
+| Keyboard | WASD / Arrow keys to move, Space or Enter to fire, **X / B / Shift** to deploy a bomb, Enter / Space to confirm, **← / →** at the title screen to change difficulty |
 | Touch & Mouse | Drag to steer and fire, double-tap to drop a bomb, tap to confirm |
 | All | Press **M** to toggle music and SFX |
 
@@ -49,8 +49,10 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 - **Device pixel ratio scaling** renders to high-resolution canvases for crisp visuals on Retina/HiDPI screens.
 - **Responsive layout** adapts the canvas to portrait or landscape orientations up to tablet-sized viewports.
 - **Touch-friendly gestures** leverage pointer events with subtle smoothing for accurate mobile control, including a double-tap bomb gesture on phones and tablets.
-- **Boss escalations & level theming** cycle through changing nebula palettes, background starfields, and multi-phase boss ships that echo Star Wars-inspired silhouettes with metallic specular highlights.
-- **Power-ups and bombs** introduce screen-clearing ordnance, shield boosts, speed bursts, and spread cannons to help players survive three hits per life across three lives.
+- **Boss escalations & level theming** cycle through changing nebula palettes with dimmer starfields, randomized star colours per sector, and multi-phase boss ships that echo Star Wars-inspired silhouettes with metallic specular highlights.
+- **Difficulty presets** (Easy/Medium/Hard) tune enemy durability, projectile density, spawn cadence, and boss aggression so the opening patrol is approachable while the hard setting becomes a bullet-hell gauntlet.
+- **Power-ups and bombs** introduce screen-clearing ordnance, shield boosts, speed bursts, a three-tier spread cannon, and a piercing laser cannon to help players survive three hits per life across three lives.
+- **HUD metadata** keeps the author credit (Cliff Wang), semantic version, and release date visible alongside score, lives, hull, and bomb counts.
 - **Soundtrack and SFX** are synthesised at runtime with a mute toggle, and can be replaced with licensed audio assets.
 - **Persistent best score** stored locally so high scores survive reloads.
 

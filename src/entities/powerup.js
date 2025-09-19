@@ -3,7 +3,8 @@ import { clamp } from "../utils.js";
 const PALETTE = {
   bomb: { base: "#ffcf5a", glow: "#ffe6a1", label: "B" },
   speed: { base: "#4fe3c1", glow: "#9fffe6", label: "S" },
-  spread: { base: "#ff7bd5", glow: "#ffc5f2", label: "W" },
+  spread: { base: "#ff7bd5", glow: "#ffc5f2", label: "SP" },
+  laser: { base: "#9f87ff", glow: "#e3dcff", label: "L" },
   shield: { base: "#6fb3ff", glow: "#c9e4ff", label: "H" },
 };
 
@@ -50,7 +51,8 @@ export class PowerUp {
     ctx.stroke();
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-    ctx.font = `600 ${this.radius * 0.95}px 'Inter', 'Segoe UI', sans-serif`;
+    const fontSize = palette.label.length > 1 ? this.radius * 0.7 : this.radius * 0.95;
+    ctx.font = `600 ${fontSize}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(palette.label, 0, 1);

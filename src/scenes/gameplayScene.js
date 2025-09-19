@@ -8,6 +8,53 @@ import { Boss, resetBossPaletteCycle } from "../entities/bosses.js";
 import { distanceSquared, randChoice, randRange } from "../utils.js";
 import { DebriefScene } from "./debriefScene.js";
 
+export const DIFFICULTY_PRESETS = [
+  {
+    id: "easy",
+    label: "Easy",
+    description: "輕鬆巡航",
+    enemyHealthMultiplier: 0.75,
+    enemyFireRateMultiplier: 0.85,
+    enemyExtraProjectiles: -1,
+    bossHealthMultiplier: 0.85,
+    bossFireRateMultiplier: 0.85,
+    bossBulletMultiplier: 0.8,
+    spawnDelayMultiplier: 1.15,
+  },
+  {
+    id: "medium",
+    label: "Medium",
+    description: "正規出擊",
+    enemyHealthMultiplier: 1,
+    enemyFireRateMultiplier: 1,
+    enemyExtraProjectiles: 0,
+    bossHealthMultiplier: 1,
+    bossFireRateMultiplier: 1,
+    bossBulletMultiplier: 1,
+    spawnDelayMultiplier: 1,
+  },
+  {
+    id: "hard",
+    label: "Hard",
+    description: "危機四伏",
+    enemyHealthMultiplier: 1.3,
+    enemyFireRateMultiplier: 1.15,
+    enemyExtraProjectiles: 1,
+    bossHealthMultiplier: 1.35,
+    bossFireRateMultiplier: 1.2,
+    bossBulletMultiplier: 1.25,
+    spawnDelayMultiplier: 0.8,
+  },
+];
+
+const STAR_COLOR_CHOICES = [
+  "rgba(150, 220, 255, 0.45)",
+  "rgba(255, 214, 170, 0.45)",
+  "rgba(206, 180, 255, 0.45)",
+  "rgba(182, 250, 210, 0.45)",
+  "rgba(255, 236, 210, 0.45)",
+];
+
 const PLAYER_MAX_LIVES = 3;
 const COLLISION_RADIUS = 24;
 const HEALTH_PER_LIFE = 3;
@@ -42,9 +89,11 @@ const STAGES = [
 ];
 
 export class GameplayScene {
-  constructor(game) {
+  constructor(game, difficulty = DIFFICULTY_PRESETS[1]) {
     this.game = game;
+    this.difficulty = difficulty ?? DIFFICULTY_PRESETS[1];
     this.starfield = new Starfield(game, 220);
+    this.starfield.setBrightness(0.5);
     this.player = new Player(game);
     this.playerLives = PLAYER_MAX_LIVES;
     this.playerBombs = this.player.bombCapacity;
@@ -59,6 +108,10 @@ export class GameplayScene {
     this.bossSpawned = false;
     this.bombTimer = 0;
     this.bombFlashTimer = 0;
+    this.levelBannerTimer = 0;
+    this.levelBannerText = "";
+    this.levelBannerSubtitle = "";
+    this.currentStarColor = null;
 
     this.playerBullets = [];
     this.enemyBullets = [];
@@ -67,8 +120,8 @@ export class GameplayScene {
     this.powerUps = [];
 
     resetBossPaletteCycle();
-    this.starfield.setPalette(STAGES[this.stageIndex].palette);
-    this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay);
+    this.applyStagePalette(STAGES[this.stageIndex]);
+    this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay) * this.difficulty.spawnDelayMultiplier;
     this.game.audio.setMusicStage(0);
   }
 
@@ -81,6 +134,9 @@ export class GameplayScene {
     this.time += dt;
     this.stageTime += dt;
     this.starfield.update(dt);
+    if (this.levelBannerTimer > 0) {
+      this.levelBannerTimer = Math.max(0, this.levelBannerTimer - dt);
+    }
 
     const fired = this.player.update(dt, this.game.input);
     this.playerBullets.push(...fired);
@@ -95,7 +151,7 @@ export class GameplayScene {
     if (!this.boss && this.stageTime < 30 && this.waveTimer >= this.spawnDelay) {
       this.waveTimer = 0;
       this.spawnWave();
-      this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay);
+      this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay) * this.difficulty.spawnDelayMultiplier;
     }
 
     for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
@@ -134,7 +190,7 @@ export class GameplayScene {
       this.game.audio.playBossWarning();
       this.game.audio.setMusicStage(this.stageIndex + 1);
       this.bossSpawned = true;
-      this.boss = new Boss(this.game, this.stageIndex);
+      this.boss = new Boss(this.game, this.stageIndex, this.difficulty);
     }
 
     if (this.bossWarningTimer > 0) {
@@ -221,19 +277,28 @@ export class GameplayScene {
   }
 
   advanceStage() {
+    const previousIndex = this.stageIndex;
     this.stageIndex = Math.min(this.stageIndex + 1, STAGES.length - 1);
     const stage = STAGES[this.stageIndex];
     this.stageTime = 0;
     this.waveTimer = 0;
-    this.spawnDelay = randRange(...stage.spawnDelay);
-    this.starfield.setPalette(stage.palette);
+    this.spawnDelay = randRange(...stage.spawnDelay) * this.difficulty.spawnDelayMultiplier;
+    this.applyStagePalette(stage);
     this.game.audio.setMusicStage(this.stageIndex);
     this.bossSpawned = false;
+    this.bossWarningTimer = 0;
+    this.levelBannerTimer = 3.2;
+    const levelNumber = this.stageIndex + 1;
+    this.levelBannerText = "晉級到下一個 LEVEL";
+    this.levelBannerSubtitle = `Level ${levelNumber}: ${stage.name}`;
+    if (this.stageIndex === previousIndex && previousIndex === STAGES.length - 1) {
+      this.levelBannerSubtitle = `${stage.name} — Final Push`;
+    }
   }
 
   dropBossRewards() {
     if (!this.boss) return;
-    for (const type of ["bomb", "spread", "speed", "shield"]) {
+    for (const type of ["bomb", "spread", "laser", "speed", "shield"]) {
       this.powerUps.push(
         new PowerUp({
           x: this.boss.x + randRange(-60, 60),
@@ -242,6 +307,13 @@ export class GameplayScene {
         }),
       );
     }
+  }
+
+  applyStagePalette(stage) {
+    const nextStarColor = pickStarColor(this.currentStarColor);
+    this.currentStarColor = nextStarColor;
+    this.starfield.setPalette({ ...stage.palette, star: nextStarColor });
+    this.starfield.setBrightness(0.5);
   }
 
   spawnWave() {
@@ -334,7 +406,7 @@ export class GameplayScene {
             frequency: 4.2,
             fireCooldown: 1.4,
             burst: 3,
-            dropType: i === 5 ? "speed" : null,
+            dropType: i === 5 ? "laser" : i === 2 ? "speed" : null,
           }),
         );
       }
@@ -409,7 +481,7 @@ export class GameplayScene {
             burstSpread: 0.5,
             health: 6,
             speedY: 150,
-            dropType: i === 1 ? "spread" : null,
+            dropType: i === 1 ? "laser" : i === 0 ? "spread" : null,
           }),
         );
       }
@@ -417,9 +489,18 @@ export class GameplayScene {
   }
 
   createEnemy(config) {
+    const baseHealth = config.health ?? 3;
+    const baseBurst = config.burst ?? 1;
+    const baseCooldown = config.fireCooldown ?? 1.6;
+    const health = Math.max(1, Math.round(baseHealth * this.difficulty.enemyHealthMultiplier));
+    const burst = Math.max(1, Math.round(baseBurst + this.difficulty.enemyExtraProjectiles));
+    const fireCooldown = baseCooldown / this.difficulty.enemyFireRateMultiplier;
     const enemy = new Enemy({
       bounds: this.game,
       ...config,
+      health,
+      burst,
+      fireCooldown,
     });
     return enemy;
   }
@@ -461,7 +542,7 @@ export class GameplayScene {
             if (enemy.dropType) {
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: enemy.dropType }));
             } else if (Math.random() < 0.032) {
-              const types = ["bomb", "spread", "speed", "shield"];
+              const types = ["bomb", "spread", "laser", "speed", "shield"];
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: randChoice(types) }));
             }
           }
@@ -560,8 +641,9 @@ export class GameplayScene {
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
     ctx.font = `500 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(`Stage: ${STAGES[this.stageIndex].name}`, 24, 78);
+    ctx.fillText(`Stage: ${STAGES[this.stageIndex].name} (${this.difficulty.label})`, 24, 78);
 
+    this.renderMetadata(ctx);
     this.renderLives(ctx);
     this.renderHealth(ctx);
     this.renderBombs(ctx);
@@ -587,13 +669,18 @@ export class GameplayScene {
       ctx.restore();
     }
 
+    if (this.levelBannerTimer > 0) {
+      this.renderLevelBanner(ctx);
+    }
+
     ctx.restore();
   }
 
   renderLives(ctx) {
     const iconSize = 18;
     ctx.save();
-    ctx.translate(this.game.width - 160, 26);
+    const baseX = Math.max(120, this.game.width - 300);
+    ctx.translate(baseX, 32);
     ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
     ctx.font = `500 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillText("Lives", 0, 0);
@@ -617,10 +704,9 @@ export class GameplayScene {
   renderHealth(ctx) {
     const barWidth = 180;
     const barHeight = 14;
-    const x = 24;
-    const y = 60;
     ctx.save();
-    ctx.translate(this.game.width - 220, 42);
+    const baseX = Math.max(120, this.game.width - 300);
+    ctx.translate(baseX, 74);
     ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
     ctx.font = `500 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillText("Hull", 0, 0);
@@ -690,4 +776,41 @@ export class GameplayScene {
     ctx.fillText(`BGM: ${enabled ? "ON" : "OFF"} (M)`, this.game.width - 24, this.game.height - 24);
     ctx.restore();
   }
+
+  renderMetadata(ctx) {
+    ctx.save();
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.font = `600 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("Cliff Wang", this.game.width - 24, 40);
+    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.fillText("v1.0 • 2024-05-01", this.game.width - 24, 64);
+    ctx.restore();
+  }
+
+  renderLevelBanner(ctx) {
+    ctx.save();
+    const progress = Math.min(1, this.levelBannerTimer / 3.2);
+    ctx.globalAlpha = Math.sin(progress * Math.PI) * 0.85;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.font = `700 ${Math.max(36, this.game.width * 0.06)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(this.levelBannerText, this.game.width / 2, this.game.height * 0.26);
+    ctx.font = `500 ${Math.max(18, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(this.levelBannerSubtitle, this.game.width / 2, this.game.height * 0.32 + 28);
+    ctx.restore();
+  }
+}
+
+function pickStarColor(previousColor) {
+  let selection = randChoice(STAR_COLOR_CHOICES);
+  if (STAR_COLOR_CHOICES.length > 1) {
+    let guard = 0;
+    while (selection === previousColor && guard < 5) {
+      selection = randChoice(STAR_COLOR_CHOICES);
+      guard += 1;
+    }
+  }
+  return selection;
 }

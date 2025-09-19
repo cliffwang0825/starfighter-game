@@ -12,6 +12,9 @@ export class Player {
     this.fireCooldown = this.baseFireCooldown;
     this.spreadLevel = 0;
     this.spreadTimer = 0;
+    this.weaponMode = "cannon";
+    this.laserLevel = 0;
+    this.laserTimer = 0;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
     this.bombCapacity = 2;
@@ -29,6 +32,9 @@ export class Player {
     this.health = this.maxHealth;
     this.spreadLevel = 0;
     this.spreadTimer = 0;
+    this.weaponMode = "cannon";
+    this.laserLevel = 0;
+    this.laserTimer = 0;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
     this.updateDerivedStats();
@@ -42,10 +48,24 @@ export class Player {
       }
     }
 
+    if (this.laserTimer > 0) {
+      this.laserTimer = Math.max(0, this.laserTimer - dt);
+      if (this.laserTimer === 0) {
+        this.laserLevel = 0;
+        if (this.weaponMode === "laser") {
+          this.weaponMode = "cannon";
+          this.updateDerivedStats();
+        }
+      }
+    }
+
     if (this.spreadTimer > 0) {
       this.spreadTimer = Math.max(0, this.spreadTimer - dt);
       if (this.spreadTimer === 0) {
         this.spreadLevel = 0;
+        if (this.weaponMode === "spread") {
+          this.weaponMode = "cannon";
+        }
         this.updateDerivedStats();
       }
     }
@@ -91,28 +111,51 @@ export class Player {
     const fired = [];
     if (input.isFiring() && this.fireTimer <= 0) {
       this.fireTimer = this.fireCooldown;
-      const bulletSpeed = -620 - this.spreadLevel * 40;
-      const patterns = [{ angle: 0, offsetX: 0, offsetY: -this.radius - 4 }];
-      if (this.spreadLevel >= 1) {
-        patterns.push({ angle: -0.16, offsetX: -12, offsetY: -this.radius + 4 });
-        patterns.push({ angle: 0.16, offsetX: 12, offsetY: -this.radius + 4 });
-      }
-      if (this.spreadLevel >= 2) {
-        patterns.push({ angle: -0.32, offsetX: -18, offsetY: -this.radius + 12 });
-        patterns.push({ angle: 0.32, offsetX: 18, offsetY: -this.radius + 12 });
-      }
-      for (const pattern of patterns) {
-        const speedX = Math.sin(pattern.angle) * Math.abs(bulletSpeed);
-        const speedY = Math.cos(pattern.angle) * bulletSpeed;
-        fired.push({
-          x: this.x + pattern.offsetX,
-          y: this.y + pattern.offsetY,
-          velocityY: speedY,
-          velocityX: speedX,
-          radius: 4,
-          friendly: true,
-          damage: 1,
-        });
+      if (this.weaponMode === "laser" && this.laserLevel > 0) {
+        const beams = this.laserLevel === 1 ? 1 : this.laserLevel === 2 ? 2 : 3;
+        const offsetBase = 16;
+        for (let i = 0; i < beams; i += 1) {
+          const offset = (i - (beams - 1) / 2) * offsetBase;
+          fired.push({
+            x: this.x + offset,
+            y: this.y - this.radius - 10,
+            velocityY: -900,
+            velocityX: 0,
+            radius: 6 + this.laserLevel,
+            friendly: true,
+            damage: 2 + this.laserLevel,
+            type: "laser",
+          });
+        }
+      } else {
+        const spreadRank = this.weaponMode === "spread" ? this.spreadLevel : 0;
+        const bulletSpeed = -620 - spreadRank * 40;
+        const patterns = [{ angle: 0, offsetX: 0, offsetY: -this.radius - 4 }];
+        if (spreadRank >= 1) {
+          patterns.push({ angle: -0.16, offsetX: -12, offsetY: -this.radius + 4 });
+          patterns.push({ angle: 0.16, offsetX: 12, offsetY: -this.radius + 4 });
+        }
+        if (spreadRank >= 2) {
+          patterns.push({ angle: -0.32, offsetX: -18, offsetY: -this.radius + 12 });
+          patterns.push({ angle: 0.32, offsetX: 18, offsetY: -this.radius + 12 });
+        }
+        if (spreadRank >= 3) {
+          patterns.push({ angle: -0.48, offsetX: -26, offsetY: -this.radius + 16 });
+          patterns.push({ angle: 0.48, offsetX: 26, offsetY: -this.radius + 16 });
+        }
+        for (const pattern of patterns) {
+          const speedX = Math.sin(pattern.angle) * Math.abs(bulletSpeed);
+          const speedY = Math.cos(pattern.angle) * bulletSpeed;
+          fired.push({
+            x: this.x + pattern.offsetX,
+            y: this.y + pattern.offsetY,
+            velocityY: speedY,
+            velocityX: speedX,
+            radius: 4,
+            friendly: true,
+            damage: 1,
+          });
+        }
       }
       this.game.audio.playShot();
     }
@@ -122,10 +165,18 @@ export class Player {
 
   updateDerivedStats() {
     this.speed = this.baseSpeed + (this.speedBoostTimer > 0 ? 90 : 0);
-    this.fireCooldown = this.baseFireCooldown * (this.speedBoostTimer > 0 ? 0.72 : 1);
-    if (this.spreadLevel > 0) {
-      this.fireCooldown *= 0.9;
+    let cooldown = this.baseFireCooldown;
+    if (this.weaponMode === "spread" && this.spreadLevel > 0) {
+      const modifiers = [1, 0.9, 0.84, 0.78];
+      cooldown *= modifiers[this.spreadLevel] ?? 0.78;
+    } else if (this.weaponMode === "laser" && this.laserLevel > 0) {
+      const presets = [this.baseFireCooldown, 0.24, 0.2, 0.16];
+      cooldown = presets[this.laserLevel] ?? 0.16;
     }
+    if (this.speedBoostTimer > 0) {
+      cooldown *= 0.72;
+    }
+    this.fireCooldown = Math.max(0.08, cooldown);
   }
 
   takeHit(amount = 1) {
@@ -150,8 +201,19 @@ export class Player {
         this.updateDerivedStats();
         break;
       case "spread":
-        this.spreadLevel = Math.min(2, this.spreadLevel + 1);
+        this.weaponMode = "spread";
+        this.spreadLevel = Math.min(3, this.spreadLevel > 0 ? this.spreadLevel + 1 : 1);
         this.spreadTimer = 12;
+        this.laserLevel = 0;
+        this.laserTimer = 0;
+        this.updateDerivedStats();
+        break;
+      case "laser":
+        this.weaponMode = "laser";
+        this.laserLevel = Math.min(3, this.laserLevel > 0 ? this.laserLevel + 1 : 1);
+        this.laserTimer = 10 + this.laserLevel * 2;
+        this.spreadLevel = 0;
+        this.spreadTimer = 0;
         this.updateDerivedStats();
         break;
       case "shield":

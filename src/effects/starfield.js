@@ -3,7 +3,7 @@ import { randRange } from "../utils.js";
 const DEFAULT_PALETTE = {
   top: "#05070d",
   bottom: "#0b1628",
-  star: "rgba(150, 200, 255, 0.85)",
+  star: "rgba(150, 200, 255, 0.42)",
 };
 
 export class Starfield {
@@ -13,6 +13,7 @@ export class Starfield {
     this.stars = [];
     this.speed = 120;
     this.palette = { ...DEFAULT_PALETTE };
+    this.brightness = 0.5;
     this._populate();
   }
 
@@ -59,7 +60,7 @@ export class Starfield {
 
     for (const star of this.stars) {
       const twinkle = Math.sin(time * 0.0018 + star.twinkleOffset) * 0.25 + 0.75;
-      ctx.fillStyle = this._starColor(twinkle);
+      ctx.fillStyle = this._starColor(twinkle * this.brightness);
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
       ctx.fill();
@@ -71,9 +72,14 @@ export class Starfield {
     this.palette = { ...DEFAULT_PALETTE, ...palette };
   }
 
+  setBrightness(multiplier) {
+    this.brightness = Math.max(0, Math.min(1, multiplier));
+  }
+
   _starColor(alpha) {
     if (this.palette.star.includes("rgba")) {
-      return this.palette.star.replace(/\d?\.\d+\)/, `${alpha})`);
+      const clampedAlpha = Math.max(0, Math.min(1, alpha));
+      return this.palette.star.replace(/\d?\.\d+\)/, `${clampedAlpha})`);
     }
     return this.palette.star;
   }
