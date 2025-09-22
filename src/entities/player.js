@@ -14,11 +14,8 @@ export class Player {
     this.moveSmoothing = 0.25;
     this.baseFireCooldown = 0.12;
     this.fireCooldown = this.baseFireCooldown;
-    this.spreadLevel = 0;
-    this.spreadTimer = 0;
     this.weaponMode = "cannon";
-    this.laserLevel = 0;
-    this.laserTimer = 0;
+    this.weaponLevel = 1;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
     this.bombCapacity = 2;
@@ -38,11 +35,8 @@ export class Player {
     this.velocityY = 0;
     this.fireTimer = 0;
     this.health = this.maxHealth;
-    this.spreadLevel = 0;
-    this.spreadTimer = 0;
     this.weaponMode = "cannon";
-    this.laserLevel = 0;
-    this.laserTimer = 0;
+    this.weaponLevel = 1;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
     this.invulnerableTimer = 0;
@@ -67,28 +61,6 @@ export class Player {
     if (this.speedBoostTimer > 0) {
       this.speedBoostTimer = Math.max(0, this.speedBoostTimer - dt);
       if (this.speedBoostTimer === 0) {
-        this.updateDerivedStats();
-      }
-    }
-
-    if (this.laserTimer > 0) {
-      this.laserTimer = Math.max(0, this.laserTimer - dt);
-      if (this.laserTimer === 0) {
-        this.laserLevel = 0;
-        if (this.weaponMode === "laser") {
-          this.weaponMode = "cannon";
-          this.updateDerivedStats();
-        }
-      }
-    }
-
-    if (this.spreadTimer > 0) {
-      this.spreadTimer = Math.max(0, this.spreadTimer - dt);
-      if (this.spreadTimer === 0) {
-        this.spreadLevel = 0;
-        if (this.weaponMode === "spread") {
-          this.weaponMode = "cannon";
-        }
         this.updateDerivedStats();
       }
     }
@@ -134,8 +106,9 @@ export class Player {
     const fired = [];
     if (this.fireTimer <= 0) {
       this.fireTimer = this.fireCooldown;
-      if (this.weaponMode === "laser" && this.laserLevel > 0) {
-        const beams = this.laserLevel === 1 ? 1 : this.laserLevel === 2 ? 2 : 3;
+      const activeLevel = this.getStoredWeaponLevel();
+      if (this.weaponMode === "laser" && activeLevel > 0) {
+        const beams = activeLevel === 1 ? 1 : activeLevel === 2 ? 2 : 3;
         const offsetBase = 16;
         for (let i = 0; i < beams; i += 1) {
           const offset = (i - (beams - 1) / 2) * offsetBase;
@@ -144,15 +117,15 @@ export class Player {
             y: this.y - this.radius - 10,
             velocityY: -900,
             velocityX: 0,
-            radius: 6 + this.laserLevel,
+            radius: 6 + activeLevel,
             friendly: true,
-            damage: 2 + this.laserLevel,
+            damage: 2 + activeLevel,
             owner: this.playerIndex,
             type: "laser",
           });
         }
       } else {
-        const spreadRank = this.weaponMode === "spread" ? this.spreadLevel : 0;
+        const spreadRank = this.weaponMode === "spread" ? Math.max(1, activeLevel) : 0;
         const bulletSpeed = -620 - spreadRank * 40;
         const patterns = [{ angle: 0, offsetX: 0, offsetY: -this.radius - 4 }];
         if (spreadRank >= 1) {
@@ -193,12 +166,13 @@ export class Player {
   updateDerivedStats() {
     this.speed = this.baseSpeed + (this.speedBoostTimer > 0 ? 90 : 0);
     let cooldown = this.baseFireCooldown;
-    if (this.weaponMode === "spread" && this.spreadLevel > 0) {
-      const modifiers = [1, 0.9, 0.84, 0.78];
-      cooldown *= modifiers[this.spreadLevel] ?? 0.78;
-    } else if (this.weaponMode === "laser" && this.laserLevel > 0) {
+    const storedLevel = this.getStoredWeaponLevel();
+    if (this.weaponMode === "spread") {
+      const modifiers = { 1: 1, 2: 0.9, 3: 0.84 };
+      cooldown *= modifiers[storedLevel] ?? 0.78;
+    } else if (this.weaponMode === "laser") {
       const presets = [this.baseFireCooldown, 0.24, 0.2, 0.16];
-      cooldown = presets[this.laserLevel] ?? 0.16;
+      cooldown = presets[storedLevel] ?? 0.16;
     }
     if (this.speedBoostTimer > 0) {
       cooldown *= 0.72;
@@ -227,22 +201,28 @@ export class Player {
         this.speedBoostTimer = 8;
         this.updateDerivedStats();
         break;
-      case "spread":
+      case "spread": {
+        if (this.weaponMode === "spread") {
+          this.weaponLevel = Math.min(3, this.weaponLevel + 1);
+        } else {
+          this.weaponLevel = Math.max(1, Math.min(3, this.weaponLevel));
+        }
         this.weaponMode = "spread";
-        this.spreadLevel = Math.min(3, this.spreadLevel > 0 ? this.spreadLevel + 1 : 1);
-        this.spreadTimer = 12;
-        this.laserLevel = 0;
-        this.laserTimer = 0;
         this.updateDerivedStats();
+        this.weaponLevel = this.getStoredWeaponLevel();
         break;
-      case "laser":
+      }
+      case "laser": {
+        if (this.weaponMode === "laser") {
+          this.weaponLevel = Math.min(3, this.weaponLevel + 1);
+        } else {
+          this.weaponLevel = Math.max(1, Math.min(3, this.weaponLevel));
+        }
         this.weaponMode = "laser";
-        this.laserLevel = Math.min(3, this.laserLevel > 0 ? this.laserLevel + 1 : 1);
-        this.laserTimer = 10 + this.laserLevel * 2;
-        this.spreadLevel = 0;
-        this.spreadTimer = 0;
         this.updateDerivedStats();
+        this.weaponLevel = this.getStoredWeaponLevel();
         break;
+      }
       case "health":
         this.heal(1);
         break;
@@ -263,6 +243,31 @@ export class Player {
 
   get isInvulnerable() {
     return this.invulnerableTimer > 0 || this.shieldTimer > 0;
+  }
+
+  getStoredWeaponLevel() {
+    return Math.max(1, Math.min(3, Math.round(this.weaponLevel ?? 1)));
+  }
+
+  getWeaponLabel() {
+    switch (this.weaponMode) {
+      case "spread":
+        return "SPREAD";
+      case "laser":
+        return "LASER";
+      default:
+        return "CANNON";
+    }
+  }
+
+  getWeaponDisplayInfo() {
+    const gaugeLevel = this.getStoredWeaponLevel();
+    return {
+      mode: this.weaponMode,
+      label: this.getWeaponLabel(),
+      level: gaugeLevel,
+      gaugeLevel,
+    };
   }
 
   render(ctx) {

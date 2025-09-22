@@ -942,6 +942,15 @@ export class GameplayScene {
     ctx.textAlign = "left";
     ctx.fillText(`P${index + 1}`, 12, 16);
 
+    const weaponInfo = player.getWeaponDisplayInfo();
+    const gaugeInactive = player.isEliminated || lives <= 0;
+    ctx.save();
+    ctx.textAlign = "right";
+    ctx.font = `600 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = player.isEliminated || lives <= 0 ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.82)";
+    ctx.fillText(`${weaponInfo.label} Lv${weaponInfo.level}`, width - 12, 16);
+    ctx.restore();
+
     const lifeIconSpacing = 22;
     const iconStart = 44;
     const lifeIconY = 18;
@@ -986,6 +995,41 @@ export class GameplayScene {
       const filled = i < bombs;
       const fillStyle = filled ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
       drawMiniBomb(ctx, bombStartX + i * 16, bombY, fillStyle);
+    }
+
+    const gaugeSegments = 3;
+    const gaugeWidth = 12;
+    const gaugeSpacing = 5;
+    const gaugeHeight = 6;
+    const totalGaugeWidth = gaugeSegments * gaugeWidth + (gaugeSegments - 1) * gaugeSpacing;
+    const gaugeStartX = width - 12 - totalGaugeWidth;
+    const gaugeY = height - 20;
+    ctx.save();
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.font = `600 ${Math.max(9, this.game.width * 0.015)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = gaugeInactive ? "rgba(255, 255, 255, 0.35)" : "rgba(255, 255, 255, 0.55)";
+    ctx.fillText("LV", gaugeStartX - 6, gaugeY + gaugeHeight / 2);
+    ctx.restore();
+    for (let i = 0; i < gaugeSegments; i += 1) {
+      const filled = i < weaponInfo.gaugeLevel;
+      const fillColor = gaugeInactive
+        ? filled
+          ? "rgba(255, 255, 255, 0.32)"
+          : "rgba(255, 255, 255, 0.18)"
+        : filled
+        ? accent
+        : "rgba(255, 255, 255, 0.22)";
+      ctx.fillStyle = fillColor;
+      drawRoundedRect(
+        ctx,
+        gaugeStartX + i * (gaugeWidth + gaugeSpacing),
+        gaugeY,
+        gaugeWidth,
+        gaugeHeight,
+        3,
+      );
+      ctx.fill();
     }
 
     if (lives <= 0) {
