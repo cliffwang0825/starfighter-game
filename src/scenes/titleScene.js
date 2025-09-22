@@ -16,6 +16,8 @@ export class TitleScene {
     ];
     this.playerModeIndex = 0;
     this.playerLayout = [];
+    this.instructionsVisible = false;
+    this.instructionButton = null;
   }
 
   update(dt) {
@@ -23,8 +25,24 @@ export class TitleScene {
     this.starfield.update(dt);
     this.optionLayout = this.calculateOptionLayout();
     this.playerLayout = this.calculatePlayerLayout();
+    this.instructionButton = this.calculateInstructionButton();
 
     const input = this.game.input;
+    const pointerTap = input.consumeTap();
+    const pointer = input.pointer;
+
+    if (this.instructionsVisible) {
+      const closeRequested =
+        input.wasKeyPressed("Escape") ||
+        input.wasKeyPressed("Enter") ||
+        input.wasKeyPressed("Space") ||
+        input.wasKeyPressed("KeyI");
+      if (closeRequested || pointerTap) {
+        this.instructionsVisible = false;
+      }
+      return;
+    }
+
     const focusCount = 2;
     if (input.wasKeyPressed("ArrowUp") || input.wasKeyPressed("KeyW")) {
       this.focusIndex = (this.focusIndex + focusCount - 1) % focusCount;
@@ -48,9 +66,18 @@ export class TitleScene {
       }
     }
 
-    const pointerTap = input.consumeTap();
     if (pointerTap) {
-      const { x, y } = input.pointer;
+      const { x, y } = pointer;
+      if (
+        this.instructionButton &&
+        x >= this.instructionButton.x &&
+        x <= this.instructionButton.x + this.instructionButton.width &&
+        y >= this.instructionButton.y &&
+        y <= this.instructionButton.y + this.instructionButton.height
+      ) {
+        this.instructionsVisible = true;
+        return;
+      }
       const tappedDifficulty = this.optionLayout.findIndex(
         (rect) => x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height,
       );
@@ -68,6 +95,11 @@ export class TitleScene {
           this.startGame();
         }
       }
+    }
+
+    if (input.wasKeyPressed("KeyI")) {
+      this.instructionsVisible = true;
+      return;
     }
 
     if (input.wasKeyPressed("Enter") || input.wasKeyPressed("Space")) {
@@ -107,21 +139,17 @@ export class TitleScene {
 
     this.renderDifficultyOptions(ctx, this.focusIndex === 0);
     this.renderPlayerOptions(ctx, this.focusIndex === 1);
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-    ctx.font = `400 ${Math.max(16, this.game.width * 0.025)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("P1: WASD • Bomb V   |   P2: Arrow Keys • Bomb M", this.game.width / 2, this.game.height * 0.78);
-    ctx.fillText(
-      "Press Enter / Space to launch • Auto-fire ready • Double-tap for bomb • Pause P • Restart R • Mute N",
-      this.game.width / 2,
-      this.game.height * 0.84,
-    );
+    this.renderInstructionButton(ctx);
 
     const best = this.game.storage.bestScore;
     if (best > 0) {
       ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
       ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
       ctx.fillText(`Best score: ${best}`, this.game.width / 2, this.game.height * 0.9);
+    }
+
+    if (this.instructionsVisible) {
+      this.renderInstructionOverlay(ctx);
     }
 
     ctx.restore();
@@ -131,6 +159,7 @@ export class TitleScene {
     this.starfield.onResize();
     this.optionLayout = this.calculateOptionLayout();
     this.playerLayout = this.calculatePlayerLayout();
+    this.instructionButton = this.calculateInstructionButton();
   }
 
   calculateOptionLayout() {
@@ -179,6 +208,14 @@ export class TitleScene {
     return layout;
   }
 
+  calculateInstructionButton() {
+    const width = Math.min(220, this.game.width * 0.32);
+    const height = Math.max(44, this.game.height * 0.07);
+    const x = (this.game.width - width) / 2;
+    const y = this.game.height * 0.78;
+    return { x, y, width, height };
+  }
+
   renderDifficultyOptions(ctx, focused = false) {
     const layout = this.optionLayout.length ? this.optionLayout : this.calculateOptionLayout();
     ctx.save();
@@ -211,6 +248,100 @@ export class TitleScene {
       ctx.fillText(option.description, rect.width / 2, rect.height * 0.7);
       ctx.restore();
     }
+    ctx.restore();
+  }
+
+  renderInstructionButton(ctx) {
+    const rect = this.instructionButton ?? this.calculateInstructionButton();
+    ctx.save();
+    ctx.translate(rect.x, rect.y);
+    const selected = this.instructionsVisible;
+    const gradient = ctx.createLinearGradient(0, 0, 0, rect.height);
+    gradient.addColorStop(0, selected ? "rgba(90, 209, 255, 0.35)" : "rgba(255, 255, 255, 0.18)");
+    gradient.addColorStop(1, selected ? "rgba(90, 209, 255, 0.2)" : "rgba(255, 255, 255, 0.08)");
+    ctx.fillStyle = gradient;
+    ctx.strokeStyle = selected ? "rgba(120, 226, 255, 0.95)" : "rgba(255, 255, 255, 0.48)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    const radius = 14;
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(rect.width - radius, 0);
+    ctx.quadraticCurveTo(rect.width, 0, rect.width, radius);
+    ctx.lineTo(rect.width, rect.height - radius);
+    ctx.quadraticCurveTo(rect.width, rect.height, rect.width - radius, rect.height);
+    ctx.lineTo(radius, rect.height);
+    ctx.quadraticCurveTo(0, rect.height, 0, rect.height - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.font = `600 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("INSTRUCTIONS", rect.width / 2, rect.height / 2);
+    ctx.restore();
+  }
+
+  renderInstructionOverlay(ctx) {
+    ctx.save();
+    ctx.fillStyle = "rgba(6, 10, 20, 0.86)";
+    ctx.fillRect(0, 0, this.game.width, this.game.height);
+
+    const panelWidth = Math.min(this.game.width * 0.8, 520);
+    const panelHeight = Math.min(this.game.height * 0.7, 420);
+    const x = (this.game.width - panelWidth) / 2;
+    const y = (this.game.height - panelHeight) / 2;
+
+    ctx.fillStyle = "rgba(18, 26, 42, 0.85)";
+    ctx.strokeStyle = "rgba(120, 226, 255, 0.9)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const radius = 22;
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + panelWidth - radius, y);
+    ctx.quadraticCurveTo(x + panelWidth, y, x + panelWidth, y + radius);
+    ctx.lineTo(x + panelWidth, y + panelHeight - radius);
+    ctx.quadraticCurveTo(x + panelWidth, y + panelHeight, x + panelWidth - radius, y + panelHeight);
+    ctx.lineTo(x + radius, y + panelHeight);
+    ctx.quadraticCurveTo(x, y + panelHeight, x, y + panelHeight - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+    ctx.font = `600 ${Math.max(20, this.game.width * 0.032)}px 'Orbitron', 'Segoe UI', sans-serif`;
+    ctx.fillText("操作與提示", this.game.width / 2, y + 56);
+
+    ctx.font = `400 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.textAlign = "left";
+    const lineHeight = Math.max(28, this.game.height * 0.04);
+    const startX = x + 36;
+    let cursorY = y + 108;
+    const lines = [
+      "P1：W/A/S/D 移動，V 投擲炸彈",
+      "P2：方向鍵移動，M 投擲炸彈",
+      "自動射擊啟動，可雙擊觸控或按炸彈鍵觸發清場",
+      "P 鍵暫停，R 鍵重來，Esc 返回主選單",
+      "N 鍵或點擊喇叭圖示可切換靜音模式",
+      "手機可拖曳／點擊操作，支援觸控炸彈",
+    ];
+    ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+    for (const line of lines) {
+      ctx.fillText(line, startX, cursorY);
+      cursorY += lineHeight;
+    }
+
+    ctx.textAlign = "center";
+    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.fillText("按 Enter、Space、I 或點擊任意處關閉", this.game.width / 2, y + panelHeight - 36);
+
     ctx.restore();
   }
 
@@ -252,6 +383,7 @@ export class TitleScene {
   }
 
   startGame() {
+    this.instructionsVisible = false;
     const preset = this.options[this.difficultyIndex] ?? DIFFICULTY_PRESETS[1];
     const playerOption = this.playerOptions[this.playerModeIndex] ?? this.playerOptions[0];
     this.game.audio.resume();

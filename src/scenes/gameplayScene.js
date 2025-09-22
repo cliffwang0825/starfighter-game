@@ -933,17 +933,28 @@ export class GameplayScene {
       ctx.restore();
     }
 
-    const iconSpacing = 12;
-    const iconStart = 40;
-    const lifeIconY = metadataInfo && index === 1 ? 34 : 14;
+    const lifeIconSpacing = 22;
+    const iconStart = 44;
+    const lifeIconY = metadataInfo && index === 1 ? 34 : 18;
     for (let i = 0; i < PLAYER_MAX_LIVES; i += 1) {
       const filled = i < lives;
       const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
-      drawMiniFighter(ctx, iconStart + i * iconSpacing, lifeIconY, color);
+      drawMiniFighter(ctx, iconStart + i * lifeIconSpacing, lifeIconY, color);
     }
 
+    const shieldActive = player.shieldTimer > 0;
+    const shieldX = iconStart + PLAYER_MAX_LIVES * lifeIconSpacing + 18;
+    drawShieldStatus(ctx, shieldX, lifeIconY, shieldActive, 0.9);
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = `500 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = shieldActive ? "rgba(255, 255, 255, 0.86)" : "rgba(255, 255, 255, 0.52)";
+    ctx.fillText(shieldActive ? "SHIELD" : "NO SHIELD", shieldX + 14, lifeIconY + 1);
+    ctx.restore();
+
     const barX = 12;
-    const barY = metadataInfo && index === 1 ? 38 : 28;
+    const barY = metadataInfo && index === 1 ? 44 : 30;
     const barWidth = width - 24;
     const segmentSpacing = 4;
     const segmentWidth = (barWidth - (HEALTH_PER_LIFE - 1) * segmentSpacing) / HEALTH_PER_LIFE;
@@ -967,16 +978,6 @@ export class GameplayScene {
       const fillStyle = filled ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
       drawMiniBomb(ctx, bombStartX + i * 16, bombY, fillStyle);
     }
-
-    const shieldActive = player.shieldTimer > 0;
-    const shieldX = width - 28;
-    const shieldY = height - 18;
-    drawShieldStatus(ctx, shieldX, shieldY, shieldActive);
-    ctx.textAlign = "right";
-    ctx.font = `500 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillStyle = shieldActive ? "rgba(255, 255, 255, 0.82)" : "rgba(255, 255, 255, 0.52)";
-    ctx.fillText(shieldActive ? "SHIELD" : "NO SHIELD", width - 12, height - 8);
-    ctx.textAlign = "left";
 
     if (lives <= 0) {
       ctx.fillStyle = "rgba(255, 96, 96, 0.22)";
@@ -1006,10 +1007,11 @@ export class GameplayScene {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
+    const bossName = this.boss?.definition?.name ? this.boss.definition.name.toUpperCase() : "FLAGSHIP";
     ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
     ctx.font = `600 ${Math.max(16, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText("BOSS HULL", this.game.width / 2, y + 18);
+    ctx.fillText(bossName, this.game.width / 2, y + 18);
     const innerWidth = width - 40;
     const barY = y + 26;
     const ratio = Math.max(0, Math.min(1, this.boss.health / this.boss.maxHealth));
@@ -1117,19 +1119,44 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 function drawMiniFighter(ctx, x, y, color) {
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(0.95, 0.95);
+
   ctx.beginPath();
-  ctx.moveTo(0, -6);
-  ctx.lineTo(6, 5);
-  ctx.lineTo(-6, 5);
+  ctx.moveTo(0, -11);
+  ctx.lineTo(6.2, -2.4);
+  ctx.lineTo(3.4, -2.4);
+  ctx.lineTo(9, 6.8);
+  ctx.lineTo(1.8, 4.6);
+  ctx.lineTo(0, 10.5);
+  ctx.lineTo(-1.8, 4.6);
+  ctx.lineTo(-9, 6.8);
+  ctx.lineTo(-3.4, -2.4);
+  ctx.lineTo(-6.2, -2.4);
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
   ctx.beginPath();
-  ctx.moveTo(0, -6);
-  ctx.lineTo(0, 6);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-  ctx.lineWidth = 1;
+  ctx.moveTo(0, -5);
+  ctx.lineTo(2.6, 3.6);
+  ctx.lineTo(0, 8.6);
+  ctx.lineTo(-2.6, 3.6);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.beginPath();
+  ctx.ellipse(0, -2.6, 2.8, 3.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(0, -11);
+  ctx.lineTo(0, 9.6);
   ctx.stroke();
+
   ctx.restore();
 }
 
@@ -1137,24 +1164,31 @@ function drawMiniBomb(ctx, x, y, fillStyle) {
   ctx.save();
   ctx.translate(x, y);
   ctx.beginPath();
-  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.arc(0, 0, 6, 0, Math.PI * 2);
   ctx.fillStyle = fillStyle;
   ctx.fill();
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.38)";
   ctx.lineWidth = 1;
   ctx.stroke();
+
   ctx.beginPath();
-  ctx.moveTo(-2.5, -5.5);
-  ctx.lineTo(2.5, -5.5);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
+  ctx.arc(-2, -2.6, 2.2, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(26, 30, 34, 0.85)";
+  ctx.font = "700 6.5px 'Inter', 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("B", 0, 1);
+
   ctx.restore();
 }
 
-function drawShieldStatus(ctx, x, y, active) {
+function drawShieldStatus(ctx, x, y, active, scale = 1) {
   ctx.save();
   ctx.translate(x, y);
+  ctx.scale(scale, scale);
   ctx.globalAlpha = active ? 1 : 0.45;
   const fill = active ? "#6fb3ff" : "rgba(255, 255, 255, 0.22)";
   ctx.fillStyle = fill;
@@ -1162,9 +1196,9 @@ function drawShieldStatus(ctx, x, y, active) {
   ctx.lineWidth = active ? 1.6 : 1.2;
   ctx.beginPath();
   ctx.moveTo(0, -8);
-  ctx.quadraticCurveTo(6, -6.5, 5.5, -1);
-  ctx.quadraticCurveTo(0, 7.5, 0, 7.5);
-  ctx.quadraticCurveTo(-5.5, -1, -6, -6.5);
+  ctx.quadraticCurveTo(6, -6.5, 5.2, -0.6);
+  ctx.quadraticCurveTo(0, 7.6, 0, 7.6);
+  ctx.quadraticCurveTo(-5.2, -0.6, -6, -6.5);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -1172,10 +1206,10 @@ function drawShieldStatus(ctx, x, y, active) {
   ctx.strokeStyle = active ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.5)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, -6);
-  ctx.lineTo(0, 4);
-  ctx.moveTo(-2.5, -1.2);
-  ctx.lineTo(2.5, -1.2);
+  ctx.moveTo(0, -5.6);
+  ctx.lineTo(0, 4.2);
+  ctx.moveTo(-2.5, -1);
+  ctx.lineTo(2.5, -1);
   ctx.stroke();
   ctx.restore();
 }

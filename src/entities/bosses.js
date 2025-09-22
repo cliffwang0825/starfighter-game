@@ -4,6 +4,7 @@ import { Enemy } from "./enemy.js";
 const BOSS_TYPES = [
   {
     id: "vanguard",
+    name: "Crimson Star Dreadnought",
     health: 120,
     radius: 66,
     behaviour: (boss, dt, target) => {
@@ -41,6 +42,7 @@ const BOSS_TYPES = [
   },
   {
     id: "hangar",
+    name: "Ironclad Nebula Carrier",
     health: 160,
     radius: 78,
     behaviour: (boss, dt, target) => {
@@ -103,6 +105,7 @@ const BOSS_TYPES = [
   },
   {
     id: "sentinel",
+    name: "Voidborn Sentinel Fortress",
     health: 220,
     radius: 90,
     behaviour: (boss, dt, target) => {
@@ -158,6 +161,7 @@ const BOSS_TYPES = [
   },
   {
     id: "harrier",
+    name: "Eclipse War Cruiser",
     health: 140,
     radius: 74,
     behaviour: (boss, dt, target) => {
@@ -194,6 +198,7 @@ const BOSS_TYPES = [
   },
   {
     id: "dreadnought",
+    name: "Astral Titan Dreadnought",
     health: 260,
     radius: 96,
     behaviour: (boss, dt, target) => {
@@ -227,6 +232,7 @@ const BOSS_TYPES = [
   },
   {
     id: "maelstrom",
+    name: "Galactic Maelstrom Behemoth",
     health: 200,
     radius: 88,
     behaviour: (boss, dt, target) => {
@@ -263,6 +269,7 @@ const BOSS_TYPES = [
   },
   {
     id: "paladin",
+    name: "Celestial Paladin Battleship",
     health: 210,
     radius: 92,
     behaviour: (boss, dt, target) => {
@@ -319,6 +326,7 @@ const BOSS_TYPES = [
   },
   {
     id: "obliterator",
+    name: "Obsidian Obliterator Flagship",
     health: 240,
     radius: 86,
     behaviour: (boss, dt, target) => {
@@ -375,6 +383,7 @@ const BOSS_TYPES = [
   },
   {
     id: "mirage",
+    name: "Phantom Mirage Battlecruiser",
     health: 180,
     radius: 80,
     behaviour: (boss, dt, target) => {
@@ -406,6 +415,7 @@ const BOSS_TYPES = [
   },
   {
     id: "nova",
+    name: "Aurora Nova Juggernaut",
     health: 280,
     radius: 98,
     behaviour: (boss, dt, target) => {

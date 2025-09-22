@@ -7,6 +7,12 @@ const FUSELAGE_COLORS = [
   { hull: "#080c12", trim: "#2e5e98", glow: "#6fbaff" },
 ];
 
+const CARRIER_COLORS = [
+  { hull: "#1c1410", trim: "#5a3c24", glow: "#ffb36b" },
+  { hull: "#1a120f", trim: "#6a4b32", glow: "#ff9f57" },
+  { hull: "#120d0b", trim: "#3d2b24", glow: "#f9c27a" },
+];
+
 export class Enemy {
   constructor(config) {
     this.x = config.x;
@@ -20,7 +26,13 @@ export class Enemy {
     this.burst = config.burst ?? 1;
     this.burstSpread = config.burstSpread ?? 0.2;
     this.fireTimer = randRange(0.2, this.fireCooldown);
-    this.color = randChoice(FUSELAGE_COLORS);
+    if (config.color) {
+      this.color = config.color;
+    } else if (this.dropType) {
+      this.color = randChoice(CARRIER_COLORS);
+    } else {
+      this.color = randChoice(FUSELAGE_COLORS);
+    }
     this.age = 0;
     this.scoreValue = config.scoreValue ?? 150;
     this.bounds = config.bounds;
