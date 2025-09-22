@@ -174,7 +174,7 @@ export class StrafeEnemy extends Enemy {
     this.fireTimer -= dt;
     if (this.fireTimer <= 0) {
       this.fireTimer = this.fireCooldown;
-      const spread = Math.max(2, this.burst);
+      const spread = Math.max(1, this.burst);
       const volley = [];
       for (let i = 0; i < spread; i += 1) {
         const factor = spread === 1 ? 0 : i / (spread - 1) - 0.5;

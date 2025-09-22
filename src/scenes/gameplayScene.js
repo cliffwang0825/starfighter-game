@@ -60,7 +60,7 @@ const PLAYER_MAX_LIVES = 3;
 const PLAYER_COLLISION_RADIUS = 19;
 const HEALTH_PER_LIFE = 3;
 const BOMB_DAMAGE = 18;
-const BOMB_BLAST_RADIUS = 240;
+const BOMB_BLAST_RADIUS = 480;
 const BOMB_COOLDOWN = 0.8;
 const MAX_PLAYER_COUNT = 2;
 const LEVEL_BANNER_DURATION = 2;
@@ -174,8 +174,11 @@ export class GameplayScene {
       }
     }
 
+    if (input.wasKeyPressed("KeyM")) {
+      this.game.audio.toggleMusicMute();
+    }
     if (input.wasKeyPressed("KeyN")) {
-      this.game.audio.toggleMute();
+      this.game.audio.toggleSfxMute();
     }
 
     if (this.paused) {
@@ -628,7 +631,8 @@ export class GameplayScene {
     const baseCooldown = config.fireCooldown ?? 1.6;
     const variant = config.variant;
     const health = Math.max(1, Math.round(baseHealth * this.difficulty.enemyHealthMultiplier));
-    const burst = Math.max(1, Math.round(baseBurst + this.difficulty.enemyExtraProjectiles));
+    const adjustedBurst = Math.max(1, baseBurst + this.difficulty.enemyExtraProjectiles);
+    const burst = Math.max(1, Math.round(adjustedBurst * 0.5));
     const fireCooldown = baseCooldown / this.difficulty.enemyFireRateMultiplier;
     const { variant: _ignoredVariant, ...enemyConfig } = config;
     const sharedConfig = {
@@ -1002,31 +1006,32 @@ export class GameplayScene {
   renderBossHealth(ctx, topOffset = 140) {
     if (!this.boss) return;
     ctx.save();
-    const width = Math.max(240, this.game.width - 180);
-    const height = 46;
+    const width = Math.min(260, this.game.width * 0.44);
+    const height = Math.max(32, this.game.height * 0.055);
     const x = (this.game.width - width) / 2;
-    const y = Math.max(topOffset, 16);
-    ctx.fillStyle = "rgba(8, 12, 22, 0.72)";
-    drawRoundedRect(ctx, x, y, width, height, 18);
+    const y = Math.max(topOffset, 18);
+    ctx.fillStyle = "rgba(8, 12, 22, 0.68)";
+    drawRoundedRect(ctx, x, y, width, height, 14);
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+    ctx.lineWidth = 1.2;
     ctx.stroke();
     const bossName = this.boss?.definition?.name ? this.boss.definition.name.toUpperCase() : "FLAGSHIP";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-    ctx.font = `600 ${Math.max(16, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(bossName, this.game.width / 2, y + 18);
-    const innerWidth = width - 40;
-    const barY = y + 26;
+    ctx.fillText(bossName, this.game.width / 2, y + height * 0.35);
+    const innerWidth = width - 24;
+    const barHeight = Math.max(8, height * 0.28);
+    const barY = y + height - barHeight - 8;
     const ratio = Math.max(0, Math.min(1, this.boss.health / this.boss.maxHealth));
     if (ratio > 0) {
       ctx.fillStyle = "#4fa8ff";
-      drawRoundedRect(ctx, x + 20, barY, innerWidth * ratio, 12, 6);
+      drawRoundedRect(ctx, x + 12, barY, innerWidth * ratio, barHeight, 5);
       ctx.fill();
     }
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    drawRoundedRect(ctx, x + 20, barY, innerWidth, 12, 6);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    drawRoundedRect(ctx, x + 12, barY, innerWidth, barHeight, 5);
     ctx.stroke();
     ctx.restore();
   }
@@ -1046,12 +1051,12 @@ export class GameplayScene {
 
   renderAudioHint(ctx) {
     ctx.save();
-    const enabled = this.game.audio.enabled;
+    const { musicEnabled, sfxEnabled } = this.game.audio;
     ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
     ctx.font = `400 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "right";
     ctx.fillText(
-      `BGM ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R) • Title (Esc)`,
+      `BGM ${musicEnabled ? "ON" : "OFF"} (M) • SFX ${sfxEnabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R) • Title (Esc)`,
       this.game.width - 20,
       this.game.height - 24,
     );

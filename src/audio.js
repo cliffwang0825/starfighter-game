@@ -117,7 +117,10 @@ export class AudioManager {
     this.sfxGain = null;
     this.musicSource = null;
     this.musicStage = -1;
-    this.enabled = true;
+    this.musicEnabled = true;
+    this.sfxEnabled = true;
+    this.musicVolume = 0.48;
+    this.sfxVolume = 0.8;
     this.lastShotTime = 0;
   }
 
@@ -129,8 +132,8 @@ export class AudioManager {
     this.masterGain = this.context.createGain();
     this.musicGain = this.context.createGain();
     this.sfxGain = this.context.createGain();
-    this.musicGain.gain.value = 0.48;
-    this.sfxGain.gain.value = 0.8;
+    this.musicGain.gain.value = this.musicEnabled ? this.musicVolume : 0;
+    this.sfxGain.gain.value = this.sfxEnabled ? this.sfxVolume : 0;
     this.musicGain.connect(this.masterGain);
     this.sfxGain.connect(this.masterGain);
     this.masterGain.connect(this.context.destination);
@@ -149,18 +152,40 @@ export class AudioManager {
     }
   }
 
-  toggleMute() {
-    if (!this.masterGain) {
-      this.enabled = !this.enabled;
-      return this.enabled;
+  toggleMusicMute() {
+    this.initContext();
+    this.musicEnabled = !this.musicEnabled;
+    if (this.musicGain) {
+      this.musicGain.gain.value = this.musicEnabled ? this.musicVolume : 0;
     }
-    this.enabled = !this.enabled;
-    this.masterGain.gain.value = this.enabled ? 1 : 0;
-    return this.enabled;
+    if (this.musicEnabled) {
+      if (this.musicStage >= 0) {
+        const stage = this.musicStage;
+        this.musicStage = -1;
+        this.setMusicStage(stage);
+      }
+    } else if (this.musicSource) {
+      try {
+        this.musicSource.stop();
+      } catch (_) {
+        // ignore
+      }
+      this.musicSource = null;
+    }
+    return this.musicEnabled;
+  }
+
+  toggleSfxMute() {
+    this.initContext();
+    this.sfxEnabled = !this.sfxEnabled;
+    if (this.sfxGain) {
+      this.sfxGain.gain.value = this.sfxEnabled ? this.sfxVolume : 0;
+    }
+    return this.sfxEnabled;
   }
 
   playShot() {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
     const now = this.context?.currentTime ?? 0;
     if (now - this.lastShotTime < 0.04) return;
     this.lastShotTime = now;
@@ -180,7 +205,7 @@ export class AudioManager {
   }
 
   playExplosion(power = 1) {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
     const ctx = this.context;
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -200,7 +225,7 @@ export class AudioManager {
   }
 
   playHit() {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
     const ctx = this.context;
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -218,7 +243,7 @@ export class AudioManager {
   }
 
   playBomb() {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
     const ctx = this.context;
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -236,7 +261,7 @@ export class AudioManager {
   }
 
   playPowerUp() {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
     const ctx = this.context;
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -254,7 +279,7 @@ export class AudioManager {
   }
 
   playBossWarning() {
-    if (!this.enabled) return;
+    if (!this.sfxEnabled) return;
     const ctx = this.context;
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -272,9 +297,21 @@ export class AudioManager {
   }
 
   setMusicStage(stageIndex) {
-    if (!this.enabled) return;
+    this.initContext();
     if (this.musicStage === stageIndex) return;
     this.musicStage = stageIndex;
+    if (this.musicSource) {
+      try {
+        this.musicSource.stop();
+      } catch (_) {
+        // ignore
+      }
+      this.musicSource = null;
+    }
+
+    if (!this.musicEnabled) {
+      return;
+    }
     const ctx = this.context;
     if (!ctx) return;
     const pattern = MUSIC_PATTERNS[stageIndex % MUSIC_PATTERNS.length];

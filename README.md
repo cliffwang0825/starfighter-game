@@ -39,9 +39,9 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 
 | Mode | Action |
 | --- | --- |
-| Keyboard Co-op | **Player 1** – WASD to move, **V** to deploy bombs. **Player 2** – Arrow keys to move, **M** to deploy bombs. Shots auto-fire automatically; both pilots keep three-hit hulls with three lives each. |
+| Keyboard Co-op | **Player 1** – WASD to move, **V** to deploy bombs. **Player 2** – Arrow keys to move, **Slash ( / )** to deploy bombs. Shots auto-fire automatically; both pilots keep three-hit hulls with three lives each. |
 | Touch & Mouse | Drag anywhere to steer Player 1 with auto-fire enabled. Double-tap (or tap twice quickly) to release a bomb. Tap to confirm menus. |
-| All | Enter / Space to confirm on keyboard. Press **P** to pause, **R** to restart the mission, **Esc** to return to the title, and **N** to toggle music and SFX. |
+| All | Enter / Space to confirm on keyboard. Press **P** to pause, **R** to restart the mission, **Esc** to return to the title, **M** to toggle background music, and **N** to toggle sound effects. |
 
 ## Performance & UX Features
 
@@ -57,8 +57,8 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 - **Power-ups and bombs** introduce screen-clearing ordnance, hull repairs, shield boosts, speed bursts, a three-tier spread cannon, and a piercing laser cannon to help players survive three hits per life across three lives.
 - **Compact HUD metadata** tucks the author credit (Cliff Wang), semantic version, and release date beside a slimmer scorecard while level titles pop in for two seconds at the start of each sector. Player cards shrink to avoid overlap and now light up a shield badge whenever defences are active.
 - **Illustrated power-up drops** swap the previous lettered discs for themed icons such as bomb blasts, rocket thrusters, triple-shot sprays, laser rails, red-cross medkits, and crystalline shields to improve legibility mid-fight.
-- **Adrenaline rock soundtrack** layers distorted power chords, growling bass runs, reinforced kicks, snares, and hi-hat bursts for a livelier in-browser score while retaining the mute toggle.
-- **Soundtrack and SFX** are synthesised at runtime with a mute toggle, and can be replaced with licensed audio assets.
+- **Adrenaline rock soundtrack** layers distorted power chords, growling bass runs, reinforced kicks, snares, and hi-hat bursts for a livelier in-browser score with dedicated music and SFX toggles.
+- **Soundtrack and SFX** are synthesised at runtime with independent mute toggles and can be replaced with licensed audio assets.
 - **Persistent best score** stored locally so high scores survive reloads.
 
 ## Assets and Licensing

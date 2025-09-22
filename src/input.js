@@ -13,7 +13,7 @@ const PLAYER_MOVEMENT_KEYS = [
   ]),
 ];
 
-const PLAYER_BOMB_KEYS = [["KeyV"], ["KeyM"]];
+const PLAYER_BOMB_KEYS = [["KeyV"], ["Slash"]];
 
 export class InputManager {
   constructor(canvas) {

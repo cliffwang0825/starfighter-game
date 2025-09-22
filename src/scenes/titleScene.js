@@ -106,8 +106,11 @@ export class TitleScene {
       this.startGame();
     }
 
+    if (input.wasKeyPressed("KeyM")) {
+      this.game.audio.toggleMusicMute();
+    }
     if (input.wasKeyPressed("KeyN")) {
-      this.game.audio.toggleMute();
+      this.game.audio.toggleSfxMute();
     }
   }
 
@@ -211,8 +214,9 @@ export class TitleScene {
   calculateInstructionButton() {
     const width = Math.min(220, this.game.width * 0.32);
     const height = Math.max(44, this.game.height * 0.07);
-    const x = (this.game.width - width) / 2;
-    const y = this.game.height * 0.78;
+    const margin = Math.max(18, this.game.width * 0.024);
+    const x = this.game.width - width - margin;
+    const y = this.game.height - height - margin;
     return { x, y, width, height };
   }
 
@@ -325,10 +329,10 @@ export class TitleScene {
     let cursorY = y + 108;
     const lines = [
       "P1：W/A/S/D 移動，V 投擲炸彈",
-      "P2：方向鍵移動，M 投擲炸彈",
+      "P2：方向鍵移動，/ 鍵投擲炸彈",
       "自動射擊啟動，可雙擊觸控或按炸彈鍵觸發清場",
       "P 鍵暫停，R 鍵重來，Esc 返回主選單",
-      "N 鍵或點擊喇叭圖示可切換靜音模式",
+      "M 鍵切換背景音樂，N 鍵切換音效",
       "手機可拖曳／點擊操作，支援觸控炸彈",
     ];
     ctx.fillStyle = "rgba(255, 255, 255, 0.82)";

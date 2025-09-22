@@ -560,7 +560,7 @@ function scaledInterval(base, boss) {
 
 function scaledCount(base, boss) {
   const diff = getDifficulty(boss);
-  return Math.max(1, Math.round(base * diff.bossBulletMultiplier));
+  return Math.max(1, Math.round(base * diff.bossBulletMultiplier * 0.5));
 }
 
 function makeMinion(boss, config) {
@@ -572,7 +572,7 @@ function makeMinion(boss, config) {
     ...config,
     bounds: boss.game,
     health: Math.max(1, Math.round(baseHealth * diff.enemyHealthMultiplier)),
-    burst: Math.max(1, Math.round(baseBurst + diff.enemyExtraProjectiles)),
+    burst: Math.max(1, Math.round(Math.max(1, baseBurst + diff.enemyExtraProjectiles) * 0.5)),
     fireCooldown: baseCooldown / diff.enemyFireRateMultiplier,
   });
 }
