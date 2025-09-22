@@ -1,54 +1,99 @@
 const MUSIC_PATTERNS = [
   {
-    tempo: 156,
+    tempo: 168,
     riff: [
-      { note: 0, level: 1, sustain: 1 },
-      { note: 5, level: 0.92, sustain: 1 },
-      { note: 7, level: 0.96, sustain: 1 },
-      { note: 5, level: 0.92, sustain: 1 },
+      { note: 0, level: 1.1, sustain: 0.5 },
+      { note: 7, level: 0.96, sustain: 0.5 },
+      { note: 5, level: 1.04, sustain: 0.5 },
+      { note: 7, level: 0.94, sustain: 0.5 },
+      { note: 3, level: 1, sustain: 0.5 },
+      { note: 7, level: 0.94, sustain: 0.5 },
+      { note: 5, level: 1.06, sustain: 0.5 },
+      { note: 3, level: 0.92, sustain: 0.5 },
     ],
-    bass: [0, 0, 5, 0],
+    bass: [
+      { note: 0, sustain: 1.5, level: 1.25 },
+      null,
+      { note: 0, sustain: 0.5, level: 0.9 },
+      null,
+      { note: 5, sustain: 1, level: 1.18 },
+      null,
+      { note: 3, sustain: 1, level: 1.04 },
+      null,
+    ],
     lead: [
-      { offset: 0.5, note: 12, length: 0.5, level: 0.36 },
-      { offset: 2.5, note: 14, length: 0.5, level: 0.34 },
+      { offset: 0.5, note: 12, length: 0.5, level: 0.4 },
+      { offset: 2.5, note: 14, length: 0.5, level: 0.38 },
+      { offset: 5.5, note: 15, length: 0.5, level: 0.36 },
     ],
-    detune: 0,
-    drive: 3.4,
+    snareBeats: [2, 6],
+    detune: -2,
+    drive: 4.3,
     bars: 4,
   },
   {
-    tempo: 164,
+    tempo: 176,
     riff: [
-      { note: 2, level: 1, sustain: 1 },
-      { note: 7, level: 0.94, sustain: 1 },
-      { note: 9, level: 0.98, sustain: 1 },
-      { note: 7, level: 0.94, sustain: 1 },
+      { note: 2, level: 1.08, sustain: 0.5 },
+      { note: 9, level: 0.96, sustain: 0.5 },
+      { note: 7, level: 1.02, sustain: 0.5 },
+      { note: 9, level: 0.96, sustain: 0.5 },
+      { note: 4, level: 1.02, sustain: 0.5 },
+      { note: 9, level: 0.94, sustain: 0.5 },
+      { note: 7, level: 1.06, sustain: 0.5 },
+      { note: 4, level: 0.92, sustain: 0.5 },
     ],
-    bass: [2, 2, 7, 2],
+    bass: [
+      { note: 2, sustain: 1.5, level: 1.2 },
+      null,
+      { note: 2, sustain: 0.5, level: 0.92 },
+      null,
+      { note: 7, sustain: 1, level: 1.18 },
+      null,
+      { note: 4, sustain: 1, level: 1.05 },
+      null,
+    ],
     lead: [
-      { offset: 1, note: 14, length: 0.5, level: 0.32 },
-      { offset: 3, note: 16, length: 0.5, level: 0.32 },
+      { offset: 1, note: 14, length: 0.5, level: 0.38 },
+      { offset: 3.5, note: 16, length: 0.5, level: 0.36 },
+      { offset: 6.5, note: 19, length: 0.5, level: 0.34 },
     ],
+    snareBeats: [2, 6],
     detune: -5,
-    drive: 3.8,
+    drive: 4.4,
     bars: 4,
   },
   {
-    tempo: 172,
+    tempo: 184,
     riff: [
-      { note: 5, level: 1, sustain: 1 },
-      { note: 7, level: 0.95, sustain: 1 },
-      { note: 10, level: 0.98, sustain: 1 },
-      { note: 7, level: 0.95, sustain: 1 },
+      { note: 5, level: 1.12, sustain: 0.5 },
+      { note: 12, level: 0.98, sustain: 0.5 },
+      { note: 10, level: 1.06, sustain: 0.5 },
+      { note: 12, level: 0.98, sustain: 0.5 },
+      { note: 7, level: 1.04, sustain: 0.5 },
+      { note: 12, level: 0.96, sustain: 0.5 },
+      { note: 10, level: 1.08, sustain: 0.5 },
+      { note: 7, level: 0.94, sustain: 0.5 },
     ],
-    bass: [5, 5, 7, 5],
+    bass: [
+      { note: 5, sustain: 1, level: 1.22 },
+      null,
+      { note: 5, sustain: 0.5, level: 0.94 },
+      null,
+      { note: 10, sustain: 1, level: 1.16 },
+      null,
+      { note: 7, sustain: 1, level: 1.1 },
+      { note: 12, sustain: 0.5, level: 0.9 },
+    ],
     lead: [
-      { offset: 0.5, note: 12, length: 0.5, level: 0.34 },
-      { offset: 2, note: 14, length: 0.5, level: 0.36 },
-      { offset: 3.5, note: 17, length: 0.5, level: 0.32 },
+      { offset: 0.5, note: 17, length: 0.5, level: 0.38 },
+      { offset: 2.5, note: 19, length: 0.5, level: 0.36 },
+      { offset: 4.5, note: 21, length: 0.5, level: 0.34 },
+      { offset: 7, note: 24, length: 0.5, level: 0.32 },
     ],
-    detune: 7,
-    drive: 4.1,
+    snareBeats: [2, 6, 7.5],
+    detune: 4,
+    drive: 4.6,
     bars: 4,
   },
 ];
@@ -292,23 +337,28 @@ export class AudioManager {
 
     if (pattern.bass?.length) {
       for (let beat = 0; beat < totalBeats; beat += 1) {
-        const note = pattern.bass[beat % pattern.bass.length];
-        if (note === null || note === undefined) continue;
+        const step = pattern.bass[beat % pattern.bass.length];
+        if (step === null || step === undefined) continue;
+        const noteValue = typeof step === "object" ? step.note : step;
+        if (noteValue === null || noteValue === undefined) continue;
+        const sustain = Math.max(0.5, typeof step === "object" && step.sustain ? step.sustain : 1);
+        const level = typeof step === "object" && step.level !== undefined ? step.level : 1;
         const startSample = Math.floor(beat * secondsPerBeat * ctx.sampleRate);
         const endSample = Math.min(
           data.length,
-          Math.floor((beat + 1) * secondsPerBeat * ctx.sampleRate),
+          Math.floor((beat + sustain) * secondsPerBeat * ctx.sampleRate),
         );
         const length = Math.max(1, endSample - startSample);
-        const freq = frequencyFor(note - 12, detune);
+        const freq = frequencyFor(noteValue - 12, detune);
         for (let sample = startSample; sample < endSample; sample += 1) {
           const t = (sample - startSample) / length;
           const time = sample / ctx.sampleRate;
-          let wave = Math.sin(2 * Math.PI * freq * time) * 0.8;
-          wave += Math.sin(4 * Math.PI * freq * time) * 0.35;
-          wave = Math.tanh(wave * 2.6);
-          const envelope = 1 - Math.pow(t, 1.9);
-          data[sample] += wave * envelope * 0.22;
+          let wave = Math.sin(2 * Math.PI * freq * time) * 0.85;
+          wave += Math.sin(4 * Math.PI * freq * time) * 0.4;
+          wave += Math.sin(2 * Math.PI * (freq / 2) * time) * 0.3;
+          wave = Math.tanh(wave * 3.2);
+          const envelope = 1 - Math.pow(t, 1.7);
+          data[sample] += wave * envelope * 0.3 * level;
         }
       }
     }
@@ -345,7 +395,24 @@ export class AudioManager {
       for (let i = 0; i < hiHatLength && startSample + i < data.length; i += 1) {
         const decay = 1 - i / hiHatLength;
         const noise = (Math.random() * 2 - 1) * decay;
-        data[startSample + i] += noise * 0.08;
+        data[startSample + i] += noise * 0.1;
+      }
+    }
+
+    if (pattern.snareBeats?.length) {
+      const snareLength = Math.floor(ctx.sampleRate * 0.11);
+      for (let bar = 0; bar < bars; bar += 1) {
+        for (const beatOffset of pattern.snareBeats) {
+          const startBeat = bar * beatsPerBar + beatOffset;
+          const startSample = Math.floor(startBeat * secondsPerBeat * ctx.sampleRate);
+          for (let i = 0; i < snareLength && startSample + i < data.length; i += 1) {
+            const t = i / snareLength;
+            const envelope = Math.pow(1 - t, 1.6);
+            const tone = Math.sin((2 * Math.PI * (180 - t * 90) * i) / ctx.sampleRate) * (0.35 + 0.15 * envelope);
+            const noise = (Math.random() * 2 - 1) * envelope * 0.45;
+            data[startSample + i] += (tone + noise) * 0.6;
+          }
+        }
       }
     }
 
@@ -356,14 +423,14 @@ export class AudioManager {
         const t = i / kickLength;
         const freq = 100 - t * 50;
         const wave = Math.sin((2 * Math.PI * freq * i) / ctx.sampleRate);
-        data[barStart + i] += wave * (1 - t) * 0.4;
+        data[barStart + i] += wave * (1 - t) * 0.55;
       }
       const midBeat = barStart + Math.floor((beatsPerBar / 2) * secondsPerBeat * ctx.sampleRate);
       for (let i = 0; i < kickLength && midBeat + i < data.length; i += 1) {
         const t = i / kickLength;
         const freq = 140 - t * 60;
         const wave = Math.sin((2 * Math.PI * freq * i) / ctx.sampleRate);
-        data[midBeat + i] += wave * (1 - t) * 0.28;
+        data[midBeat + i] += wave * (1 - t) * 0.34;
       }
     }
 

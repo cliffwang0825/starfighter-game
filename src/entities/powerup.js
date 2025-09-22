@@ -127,29 +127,48 @@ function drawBombIcon(ctx, palette) {
 
 function drawSpeedIcon(ctx, palette) {
   ctx.save();
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.strokeStyle = palette.stroke;
-  const noseWidth = 12;
-  const noseHeight = 16;
-  for (let i = -1; i <= 1; i += 1) {
-    ctx.save();
-    ctx.translate(i * 6, 2 - Math.abs(i) * 2);
-    ctx.fillStyle = palette.base;
-    ctx.beginPath();
-    ctx.moveTo(0, -noseHeight / 2);
-    ctx.lineTo(noseWidth / 2, noseHeight / 2);
-    ctx.lineTo(-noseWidth / 2, noseHeight / 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-  }
-  ctx.fillStyle = palette.detail;
-  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = palette.base;
   ctx.beginPath();
-  ctx.ellipse(0, 6, 10, 5, 0, 0, Math.PI);
+  ctx.moveTo(0, -14);
+  ctx.quadraticCurveTo(7, -8, 5, 6);
+  ctx.lineTo(0, 12);
+  ctx.lineTo(-5, 6);
+  ctx.quadraticCurveTo(-7, -8, 0, -14);
+  ctx.closePath();
   ctx.fill();
-  ctx.globalAlpha = 1;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-8, 4);
+  ctx.lineTo(-2, 10);
+  ctx.lineTo(-10, 12);
+  ctx.closePath();
+  ctx.moveTo(8, 4);
+  ctx.lineTo(2, 10);
+  ctx.lineTo(10, 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  const canopy = ctx.createLinearGradient(0, -10, 0, 2);
+  canopy.addColorStop(0, palette.detail);
+  canopy.addColorStop(1, clampColor(palette.base, 0.7));
+  ctx.fillStyle = canopy;
+  ctx.beginPath();
+  ctx.ellipse(0, -2, 4.5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const flame = ctx.createLinearGradient(0, 10, 0, 20);
+  flame.addColorStop(0, "rgba(255, 255, 255, 0.85)");
+  flame.addColorStop(1, "rgba(255, 140, 64, 0.0)");
+  ctx.fillStyle = flame;
+  ctx.beginPath();
+  ctx.moveTo(0, 12);
+  ctx.quadraticCurveTo(4, 18, 0, 22);
+  ctx.quadraticCurveTo(-4, 18, 0, 12);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -219,24 +238,36 @@ function drawShieldIcon(ctx, palette) {
   ctx.save();
   ctx.fillStyle = palette.base;
   ctx.strokeStyle = palette.stroke;
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = 2.4;
   ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.quadraticCurveTo(10, -9, 9, -2);
-  ctx.quadraticCurveTo(0, 12, 0, 12);
-  ctx.lineTo(-9, -2);
-  ctx.quadraticCurveTo(-10, -9, 0, -12);
+  ctx.moveTo(0, -14);
+  ctx.quadraticCurveTo(10.5, -9, 9.5, -1);
+  ctx.quadraticCurveTo(0, 14, 0, 14);
+  ctx.quadraticCurveTo(-9.5, -1, -10.5, -9);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = palette.detail;
+
+  const innerGradient = ctx.createLinearGradient(0, -10, 0, 8);
+  innerGradient.addColorStop(0, palette.detail);
+  innerGradient.addColorStop(1, clampColor(palette.base, 0.75));
+  ctx.fillStyle = innerGradient;
   ctx.beginPath();
-  ctx.moveTo(0, -8);
-  ctx.quadraticCurveTo(6, -6, 5.5, -1);
-  ctx.quadraticCurveTo(0, 6, 0, 6);
-  ctx.quadraticCurveTo(-5.5, -1, -6, -6);
+  ctx.moveTo(0, -10);
+  ctx.quadraticCurveTo(7, -6.5, 6.2, -1);
+  ctx.quadraticCurveTo(0, 9, 0, 9);
+  ctx.quadraticCurveTo(-6.2, -1, -7, -6.5);
   ctx.closePath();
   ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(0, -8);
+  ctx.lineTo(0, 6);
+  ctx.moveTo(-3.5, -1);
+  ctx.lineTo(3.5, -1);
+  ctx.stroke();
   ctx.restore();
 }
 

@@ -793,7 +793,7 @@ export class GameplayScene {
 
   renderHud(ctx) {
     ctx.save();
-    const topMargin = 16;
+    const topMargin = 12;
     const scoreRect = this.renderScorePanel(ctx, topMargin);
     const metadataInfo = { author: "Cliff Wang", version: "v1.0 • 2024-05-01" };
     const { bottom: playerBottom, renderedMetadata } = this.renderPlayerPanels(ctx, topMargin, metadataInfo);
@@ -834,8 +834,8 @@ export class GameplayScene {
   }
 
   renderScorePanel(ctx, y = 16) {
-    const width = Math.min(240, this.game.width * 0.32);
-    const height = Math.max(56, this.game.height * 0.082);
+    const width = Math.min(220, this.game.width * 0.3);
+    const height = Math.max(52, this.game.height * 0.075);
     const x = (this.game.width - width) / 2;
     ctx.save();
     ctx.shadowColor = "rgba(90, 209, 255, 0.28)";
@@ -850,17 +850,17 @@ export class GameplayScene {
     ctx.textAlign = "left";
     ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
     ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("SCORE", x + 16, y + 18);
+    ctx.fillText("SCORE", x + 14, y + 16);
     ctx.fillStyle = "#f8fbff";
     ctx.font = `700 ${Math.max(22, this.game.width * 0.038)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(`${this.score}`, x + 16, y + height - 14);
+    ctx.fillText(`${this.score}`, x + 14, y + height - 12);
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
     ctx.font = `500 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(this.difficulty.label, x + width - 16, y + 18);
+    ctx.fillText(this.difficulty.label, x + width - 12, y + 16);
     ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
     ctx.font = `500 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(`${this.playerCount}P`, x + width - 16, y + height - 14);
+    ctx.fillText(`${this.playerCount}P`, x + width - 12, y + height - 12);
     ctx.restore();
     return { top: y, bottom: y + height };
   }
@@ -869,8 +869,8 @@ export class GameplayScene {
     if (this.players.length === 0) {
       return { bottom: topY, renderedMetadata: false };
     }
-    const width = Math.min(250, this.game.width * 0.36);
-    const height = Math.max(64, this.game.height * 0.095);
+    const width = Math.min(220, this.game.width * 0.32);
+    const height = Math.max(58, this.game.height * 0.085);
     let bottom = topY;
     let renderedMetadata = false;
 
@@ -917,25 +917,25 @@ export class GameplayScene {
     ctx.globalAlpha = 1;
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
-    ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "left";
-    ctx.fillText(`P${index + 1}`, 12, 18);
+    ctx.fillText(`P${index + 1}`, 12, 16);
 
     if (metadataInfo && index === 1) {
       ctx.save();
       ctx.textAlign = "right";
       ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
-      ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(metadataInfo.author, width - 12, 18);
+      ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(metadataInfo.author, width - 12, 16);
       ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-      ctx.font = `400 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(metadataInfo.version, width - 12, 34);
+      ctx.font = `400 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(metadataInfo.version, width - 12, 30);
       ctx.restore();
     }
 
-    const iconSpacing = 14;
-    const iconStart = width - iconSpacing * PLAYER_MAX_LIVES - 12;
-    const lifeIconY = metadataInfo && index === 1 ? 40 : 16;
+    const iconSpacing = 12;
+    const iconStart = 40;
+    const lifeIconY = metadataInfo && index === 1 ? 34 : 14;
     for (let i = 0; i < PLAYER_MAX_LIVES; i += 1) {
       const filled = i < lives;
       const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
@@ -943,7 +943,7 @@ export class GameplayScene {
     }
 
     const barX = 12;
-    const barY = height / 2 - 4;
+    const barY = metadataInfo && index === 1 ? 38 : 28;
     const barWidth = width - 24;
     const segmentSpacing = 4;
     const segmentWidth = (barWidth - (HEALTH_PER_LIFE - 1) * segmentSpacing) / HEALTH_PER_LIFE;
@@ -961,12 +961,22 @@ export class GameplayScene {
     }
 
     const bombStartX = 12;
-    const bombY = height - 12;
+    const bombY = height - 14;
     for (let i = 0; i < capacity; i += 1) {
       const filled = i < bombs;
       const fillStyle = filled ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
       drawMiniBomb(ctx, bombStartX + i * 16, bombY, fillStyle);
     }
+
+    const shieldActive = player.shieldTimer > 0;
+    const shieldX = width - 28;
+    const shieldY = height - 18;
+    drawShieldStatus(ctx, shieldX, shieldY, shieldActive);
+    ctx.textAlign = "right";
+    ctx.font = `500 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = shieldActive ? "rgba(255, 255, 255, 0.82)" : "rgba(255, 255, 255, 0.52)";
+    ctx.fillText(shieldActive ? "SHIELD" : "NO SHIELD", width - 12, height - 8);
+    ctx.textAlign = "left";
 
     if (lives <= 0) {
       ctx.fillStyle = "rgba(255, 96, 96, 0.22)";
@@ -1030,8 +1040,8 @@ export class GameplayScene {
 
   renderMetadata(ctx, y = 16) {
     ctx.save();
-    const width = Math.min(200, this.game.width * 0.32);
-    const height = Math.max(50, this.game.height * 0.075);
+    const width = Math.min(188, this.game.width * 0.28);
+    const height = Math.max(46, this.game.height * 0.07);
     const x = this.game.width - width - 16;
     ctx.fillStyle = "rgba(8, 12, 22, 0.7)";
     drawRoundedRect(ctx, x, y, width, height, 16);
@@ -1041,11 +1051,11 @@ export class GameplayScene {
     ctx.stroke();
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-    ctx.font = `600 ${Math.max(14, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Cliff Wang", x + width / 2, y + 20);
-    ctx.font = `400 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("Cliff Wang", x + width / 2, y + 18);
+    ctx.font = `400 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.fillText("v1.0 • 2024-05-01", x + width / 2, y + height - 16);
+    ctx.fillText("v1.0 • 2024-05-01", x + width / 2, y + height - 14);
     ctx.restore();
     return { top: y, bottom: y + height };
   }
@@ -1138,6 +1148,34 @@ function drawMiniBomb(ctx, x, y, fillStyle) {
   ctx.lineTo(2.5, -5.5);
   ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
   ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawShieldStatus(ctx, x, y, active) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = active ? 1 : 0.45;
+  const fill = active ? "#6fb3ff" : "rgba(255, 255, 255, 0.22)";
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = active ? "rgba(207, 233, 255, 0.9)" : "rgba(255, 255, 255, 0.35)";
+  ctx.lineWidth = active ? 1.6 : 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, -8);
+  ctx.quadraticCurveTo(6, -6.5, 5.5, -1);
+  ctx.quadraticCurveTo(0, 7.5, 0, 7.5);
+  ctx.quadraticCurveTo(-5.5, -1, -6, -6.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.globalAlpha = active ? 1 : 0.35;
+  ctx.strokeStyle = active ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.5)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -6);
+  ctx.lineTo(0, 4);
+  ctx.moveTo(-2.5, -1.2);
+  ctx.lineTo(2.5, -1.2);
   ctx.stroke();
   ctx.restore();
 }

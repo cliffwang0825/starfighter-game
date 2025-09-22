@@ -55,9 +55,9 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 - **Simultaneous co-op** keeps two players active at once with always-on cannons, per-pilot bombs, and respawn invulnerability for the surviving partner.
 - **Difficulty presets** (Easy/Medium/Hard) tune enemy durability, projectile density, spawn cadence, and boss aggression so the opening patrol is approachable while the hard setting becomes a bullet-hell gauntlet.
 - **Power-ups and bombs** introduce screen-clearing ordnance, hull repairs, shield boosts, speed bursts, a three-tier spread cannon, and a piercing laser cannon to help players survive three hits per life across three lives.
-- **Compact HUD metadata** tucks the author credit (Cliff Wang), semantic version, and release date beside a slimmer scorecard while level titles pop in for two seconds at the start of each sector.
-- **Illustrated power-up drops** swap the previous lettered discs for themed icons such as bomb blasts, overlaid thruster noses, triple-shot sprays, laser rails, red-cross medkits, and shimmering shields to improve legibility mid-fight.
-- **Adrenaline rock soundtrack** layers distorted power chords, bass riffs, kicks, and hi-hat bursts for a livelier in-browser score while retaining the mute toggle.
+- **Compact HUD metadata** tucks the author credit (Cliff Wang), semantic version, and release date beside a slimmer scorecard while level titles pop in for two seconds at the start of each sector. Player cards shrink to avoid overlap and now light up a shield badge whenever defences are active.
+- **Illustrated power-up drops** swap the previous lettered discs for themed icons such as bomb blasts, rocket thrusters, triple-shot sprays, laser rails, red-cross medkits, and crystalline shields to improve legibility mid-fight.
+- **Adrenaline rock soundtrack** layers distorted power chords, growling bass runs, reinforced kicks, snares, and hi-hat bursts for a livelier in-browser score while retaining the mute toggle.
 - **Soundtrack and SFX** are synthesised at runtime with a mute toggle, and can be replaced with licensed audio assets.
 - **Persistent best score** stored locally so high scores survive reloads.
 

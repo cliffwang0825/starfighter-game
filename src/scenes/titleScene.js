@@ -101,9 +101,9 @@ export class TitleScene {
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
     ctx.font = `500 ${Math.max(16, this.game.width * 0.026)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Choose difficulty & crew complement", this.game.width / 2, this.game.height * 0.5);
+    ctx.fillText("Choose difficulty & crew complement", this.game.width / 2, this.game.height * 0.48);
     ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Use ←/→ to cycle, ↑/↓ to change rows or tap a card", this.game.width / 2, this.game.height * 0.53);
+    ctx.fillText("Use ←/→ to cycle, ↑/↓ to change rows or tap a card", this.game.width / 2, this.game.height * 0.515);
 
     this.renderDifficultyOptions(ctx, this.focusIndex === 0);
     this.renderPlayerOptions(ctx, this.focusIndex === 1);
@@ -136,12 +136,12 @@ export class TitleScene {
   calculateOptionLayout() {
     const count = this.options.length;
     if (count === 0) return [];
-    const optionWidth = Math.min(240, this.game.width * 0.28);
-    const optionHeight = Math.max(90, this.game.height * 0.14);
-    const gap = Math.min(32, this.game.width * 0.04);
+    const optionWidth = Math.min(208, this.game.width * 0.24);
+    const optionHeight = Math.max(74, this.game.height * 0.11);
+    const gap = Math.min(26, this.game.width * 0.034);
     const totalWidth = count * optionWidth + (count - 1) * gap;
     const startX = (this.game.width - totalWidth) / 2;
-    const y = this.game.height * 0.52;
+    const y = this.game.height * 0.57;
     const layout = [];
     for (let i = 0; i < count; i += 1) {
       layout.push({
@@ -157,15 +157,15 @@ export class TitleScene {
   calculatePlayerLayout() {
     const count = this.playerOptions.length;
     if (count === 0) return [];
-    const optionWidth = Math.min(210, this.game.width * 0.3);
-    const optionHeight = Math.max(80, this.game.height * 0.12);
-    const gap = Math.min(28, this.game.width * 0.038);
+    const optionWidth = Math.min(188, this.game.width * 0.26);
+    const optionHeight = Math.max(68, this.game.height * 0.1);
+    const gap = Math.min(24, this.game.width * 0.032);
     const totalWidth = count * optionWidth + (count - 1) * gap;
     const startX = (this.game.width - totalWidth) / 2;
-    const diffHeight = Math.max(90, this.game.height * 0.14);
-    const diffY = this.game.height * 0.52;
+    const diffHeight = Math.max(74, this.game.height * 0.11);
+    const diffY = this.game.height * 0.57;
     const diffBottom = diffY + diffHeight;
-    const minY = diffBottom + Math.min(48, this.game.height * 0.07);
+    const minY = diffBottom + Math.min(40, this.game.height * 0.06);
     const y = Math.max(this.game.height * 0.7, minY);
     const layout = [];
     for (let i = 0; i < count; i += 1) {
@@ -199,16 +199,16 @@ export class TitleScene {
           ? "rgba(120, 226, 255, 0.95)"
           : "rgba(90, 209, 255, 0.85)"
         : "rgba(255, 255, 255, 0.35)";
-      ctx.lineWidth = selected ? (focused ? 3.6 : 2.6) : 1.8;
-      drawRoundedRect(ctx, 0, 0, rect.width, rect.height, 16);
+      ctx.lineWidth = selected ? (focused ? 3.2 : 2.2) : 1.6;
+      drawRoundedRect(ctx, 0, 0, rect.width, rect.height, 14);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = selected ? "#5ad1ff" : "rgba(255, 255, 255, 0.8)";
-      ctx.font = `600 ${Math.max(22, this.game.width * 0.032)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.label, rect.width / 2, rect.height * 0.42);
+      ctx.fillStyle = selected ? "#5ad1ff" : "rgba(255, 255, 255, 0.82)";
+      ctx.font = `600 ${Math.max(20, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(option.label, rect.width / 2, rect.height * 0.4);
       ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-      ctx.font = `400 ${Math.max(15, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.description, rect.width / 2, rect.height * 0.72);
+      ctx.font = `400 ${Math.max(13, this.game.width * 0.021)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(option.description, rect.width / 2, rect.height * 0.7);
       ctx.restore();
     }
     ctx.restore();
@@ -236,16 +236,16 @@ export class TitleScene {
           ? `${accent}dd`
           : `${accent}aa`
         : "rgba(255, 255, 255, 0.35)";
-      ctx.lineWidth = selected ? (focused ? 3.2 : 2.4) : 1.6;
-      drawRoundedRect(ctx, 0, 0, rect.width, rect.height, 14);
+      ctx.lineWidth = selected ? (focused ? 2.8 : 2.1) : 1.5;
+      drawRoundedRect(ctx, 0, 0, rect.width, rect.height, 12);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = selected ? accent : "rgba(255, 255, 255, 0.85)";
-      ctx.font = `600 ${Math.max(20, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.label, rect.width / 2, rect.height * 0.44);
+      ctx.fillStyle = selected ? accent : "rgba(255, 255, 255, 0.84)";
+      ctx.font = `600 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(option.label, rect.width / 2, rect.height * 0.42);
       ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-      ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.description, rect.width / 2, rect.height * 0.72);
+      ctx.font = `400 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(option.description, rect.width / 2, rect.height * 0.7);
       ctx.restore();
     }
     ctx.restore();
