@@ -1,5 +1,5 @@
 import { Starfield } from "../effects/starfield.js";
-import { GameplayScene } from "./gameplayScene.js";
+import { GameplayScene, DIFFICULTY_PRESETS } from "./gameplayScene.js";
 import { TitleScene } from "./titleScene.js";
 
 export class DebriefScene {
@@ -10,6 +10,9 @@ export class DebriefScene {
     this.score = payload.score;
     this.best = Math.max(this.score, this.game.storage.bestScore);
     this.game.storage.updateBestScore(this.best);
+    this.difficulty = payload?.difficulty ?? DIFFICULTY_PRESETS[1];
+    const requestedPlayers = payload?.playerCount ?? 1;
+    this.playerCount = Math.max(1, Math.min(2, Math.round(requestedPlayers) || 1));
   }
 
   update(dt) {
@@ -18,7 +21,7 @@ export class DebriefScene {
 
     if (this.game.input.consumeConfirm()) {
       this.game.audio.setMusicStage(0);
-      this.game.setScene(new GameplayScene(this.game));
+      this.game.setScene(new GameplayScene(this.game, this.difficulty, this.playerCount));
       return;
     }
 

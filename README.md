@@ -33,7 +33,7 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 
    Then open [http://localhost:8000](http://localhost:8000) in a desktop or mobile browser.
 
-3. **Play the game** – The title screen shows your best score and lets you pick **Easy / Medium / Hard** before launching. Tap, click, or press Space/Enter to deploy once you have selected a difficulty.
+3. **Play the game** – The title screen shows your best score and lets you pick **Easy / Medium / Hard** plus a one- or two-pilot sortie before launching. Tap, click, or press Space/Enter to deploy once you have selected a configuration.
 
 ## Controls
 
@@ -55,7 +55,8 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 - **Simultaneous co-op** keeps two players active at once with always-on cannons, per-pilot bombs, and respawn invulnerability for the surviving partner.
 - **Difficulty presets** (Easy/Medium/Hard) tune enemy durability, projectile density, spawn cadence, and boss aggression so the opening patrol is approachable while the hard setting becomes a bullet-hell gauntlet.
 - **Power-ups and bombs** introduce screen-clearing ordnance, shield boosts, speed bursts, a three-tier spread cannon, and a piercing laser cannon to help players survive three hits per life across three lives.
-- **HUD metadata** keeps the author credit (Cliff Wang), semantic version, and release date visible alongside score, lives, hull, and bomb counts.
+- **Compact HUD metadata** tucks the author credit (Cliff Wang), semantic version, and release date beside a slimmer scorecard while level titles pop in for two seconds at the start of each sector.
+- **Illustrated power-up drops** swap the previous lettered discs for themed icons such as bomb casings, engine arrows, spread wings, laser cores, and shield canisters to improve legibility mid-fight.
 - **Soundtrack and SFX** are synthesised at runtime with a mute toggle, and can be replaced with licensed audio assets.
 - **Persistent best score** stored locally so high scores survive reloads.
 

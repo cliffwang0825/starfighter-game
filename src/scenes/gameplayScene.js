@@ -60,7 +60,8 @@ const PLAYER_COLLISION_RADIUS = 19;
 const HEALTH_PER_LIFE = 3;
 const BOMB_DAMAGE = 18;
 const BOMB_COOLDOWN = 0.8;
-const PLAYER_COUNT = 2;
+const MAX_PLAYER_COUNT = 2;
+const LEVEL_BANNER_DURATION = 2;
 
 const STAGES = [
   {
@@ -90,16 +91,17 @@ const STAGES = [
 ];
 
 export class GameplayScene {
-  constructor(game, difficulty = DIFFICULTY_PRESETS[1]) {
+  constructor(game, difficulty = DIFFICULTY_PRESETS[1], playerCount = MAX_PLAYER_COUNT) {
     this.game = game;
     this.difficulty = difficulty ?? DIFFICULTY_PRESETS[1];
+    this.playerCount = Math.max(1, Math.min(MAX_PLAYER_COUNT, Math.round(playerCount) || 1));
     this.starfield = new Starfield(game, 220);
     this.starfield.setBrightness(0.5);
-    this.players = Array.from({ length: PLAYER_COUNT }, (_, index) => new Player(game, { playerIndex: index }));
-    this.playerLives = Array.from({ length: PLAYER_COUNT }, () => PLAYER_MAX_LIVES);
+    this.players = Array.from({ length: this.playerCount }, (_, index) => new Player(game, { playerIndex: index }));
+    this.playerLives = Array.from({ length: this.playerCount }, () => PLAYER_MAX_LIVES);
     this.playerBombs = this.players.map((player) => player.bombCapacity);
-    this.bombTimers = new Array(PLAYER_COUNT).fill(0);
-    this.activePlayerCount = PLAYER_COUNT;
+    this.bombTimers = new Array(this.playerCount).fill(0);
+    this.activePlayerCount = this.playerCount;
     this.score = 0;
     this.time = 0;
     this.stageIndex = 0;
@@ -124,11 +126,16 @@ export class GameplayScene {
     this.powerUps = [];
 
     resetBossPaletteCycle();
-    this.applyStagePalette(STAGES[this.stageIndex]);
+    const initialStage = STAGES[this.stageIndex];
+    this.applyStagePalette(initialStage);
     this.layoutPlayers();
     this.players.forEach((player) => player.reset());
     this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay) * this.difficulty.spawnDelayMultiplier;
     this.game.audio.setMusicStage(0);
+    this.setLevelBanner({
+      text: `Level ${this.stageIndex + 1}`,
+      subtitle: initialStage.name,
+    });
   }
 
   onResize() {
@@ -336,13 +343,21 @@ export class GameplayScene {
     this.game.audio.setMusicStage(this.stageIndex);
     this.bossSpawned = false;
     this.bossWarningTimer = 0;
-    this.levelBannerTimer = 3.2;
     const levelNumber = this.stageIndex + 1;
-    this.levelBannerText = "晉級到下一個 LEVEL";
-    this.levelBannerSubtitle = `Level ${levelNumber}: ${stage.name}`;
+    let subtitle = `Level ${levelNumber}: ${stage.name}`;
     if (this.stageIndex === previousIndex && previousIndex === STAGES.length - 1) {
-      this.levelBannerSubtitle = `${stage.name} — Final Push`;
+      subtitle = `${stage.name} — Final Push`;
     }
+    this.setLevelBanner({
+      text: "晉級到下一個 LEVEL",
+      subtitle,
+    });
+  }
+
+  setLevelBanner({ text, subtitle }) {
+    this.levelBannerTimer = LEVEL_BANNER_DURATION;
+    this.levelBannerText = text;
+    this.levelBannerSubtitle = subtitle;
   }
 
   dropBossRewards() {
@@ -712,7 +727,13 @@ export class GameplayScene {
         player.eliminate();
         this.activePlayerCount = Math.max(0, this.activePlayerCount - 1);
         if (this.activePlayerCount <= 0) {
-          this.game.setScene(new DebriefScene(this.game, { score: this.score }));
+          this.game.setScene(
+            new DebriefScene(this.game, {
+              score: this.score,
+              difficulty: this.difficulty,
+              playerCount: this.playerCount,
+            }),
+          );
         }
         return;
       }
@@ -767,30 +788,19 @@ export class GameplayScene {
 
   renderHud(ctx) {
     ctx.save();
-    const hudHeight = 156;
-    ctx.fillStyle = "rgba(5, 8, 16, 0.62)";
-    ctx.fillRect(12, 12, this.game.width - 24, hudHeight);
-
-    ctx.fillStyle = "#f8fbff";
-    ctx.font = `600 ${Math.max(22, this.game.width * 0.035)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.textAlign = "left";
-    ctx.fillText(`Score: ${this.score}`, 24, 48);
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-    ctx.font = `500 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(`Stage: ${STAGES[this.stageIndex].name} (${this.difficulty.label})`, 24, 78);
-
+    const scoreBottom = this.renderScorePanel(ctx);
+    const badgesBottom = this.renderPlayerBadges(ctx, scoreBottom + 10);
     this.renderMetadata(ctx);
-    this.renderPlayerPanels(ctx, 24, 96, this.game.width - 48);
     this.renderAudioHint(ctx);
 
     if (this.boss) {
-      this.renderBossHealth(ctx);
+      const bossTop = Math.max(badgesBottom + 20, scoreBottom + 32);
+      this.renderBossHealth(ctx, bossTop);
     } else if (this.bossWarningTimer > 0) {
       ctx.save();
       ctx.globalAlpha = Math.sin(this.bossWarningTimer * 10) * 0.25 + 0.55;
       ctx.fillStyle = "#ff6b6b";
-      ctx.font = `700 ${Math.max(26, this.game.width * 0.04)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.font = `700 ${Math.max(24, this.game.width * 0.038)}px 'Inter', 'Segoe UI', sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText("BOSS INBOUND", this.game.width / 2, this.game.height * 0.22);
       ctx.restore();
@@ -811,134 +821,215 @@ export class GameplayScene {
     ctx.restore();
   }
 
-  renderPlayerPanels(ctx, startX, y, width) {
-    const panelHeight = 58;
-    const panelWidth = Math.min(240, width / PLAYER_COUNT - 16);
-    const spacing = PLAYER_COUNT > 1 ? (width - panelWidth * PLAYER_COUNT) / (PLAYER_COUNT - 1) : 0;
-    for (let i = 0; i < PLAYER_COUNT; i += 1) {
-      const x = startX + i * (panelWidth + spacing);
-      this.renderPlayerPanel(ctx, i, x, y, panelWidth, panelHeight);
-    }
+  renderScorePanel(ctx) {
+    const width = Math.min(220, this.game.width * 0.32);
+    const height = Math.max(52, this.game.height * 0.08);
+    const x = 16;
+    const y = 16;
+    ctx.save();
+    ctx.shadowColor = "rgba(90, 209, 255, 0.28)";
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "rgba(8, 12, 22, 0.72)";
+    drawRoundedRect(ctx, x, y, width, height, 16);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = "rgba(90, 209, 255, 0.5)";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+    ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("SCORE", x + 16, y + 18);
+    ctx.fillStyle = "#f8fbff";
+    ctx.font = `700 ${Math.max(22, this.game.width * 0.038)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(`${this.score}`, x + 16, y + height - 14);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.font = `500 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(this.difficulty.label, x + width - 16, y + 18);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.font = `500 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(`${this.playerCount}P`, x + width - 16, y + height - 14);
+    ctx.restore();
+    return y + height;
   }
 
-  renderPlayerPanel(ctx, index, x, y, width, height) {
+  renderPlayerBadges(ctx, startY = 0) {
+    if (this.players.length === 0) {
+      return startY;
+    }
+    const x = 16;
+    const width = Math.min(240, this.game.width * 0.36);
+    const height = Math.max(46, this.game.height * 0.065);
+    const gap = 10;
+    let bottom = startY;
+    for (let i = 0; i < this.players.length; i += 1) {
+      const y = startY + i * (height + gap);
+      this.renderPlayerBadge(ctx, i, x, y, width, height);
+      bottom = y + height;
+    }
+    return bottom;
+  }
+
+  renderPlayerBadge(ctx, index, x, y, width, height) {
     const player = this.players[index];
-    const lives = this.playerLives[index];
+    if (!player) return;
+    const lives = this.playerLives[index] ?? 0;
+    const bombs = this.playerBombs[index] ?? 0;
+    const capacity = player.bombCapacity ?? 0;
+    const health = player.isEliminated ? 0 : player.health;
+    const accent = index === 0 ? "#ff6d8f" : "#7faeff";
+
     ctx.save();
     ctx.translate(x, y);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
-    ctx.fillRect(0, 0, width, height);
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "rgba(8, 12, 22, 0.88)");
+    gradient.addColorStop(1, "rgba(8, 12, 22, 0.68)");
+    ctx.fillStyle = gradient;
+    drawRoundedRect(ctx, 0, 0, width, height, 14);
+    ctx.fill();
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-    ctx.font = `600 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "left";
-    ctx.fillText(`P${index + 1}`, 10, 18);
-    ctx.font = `400 ${Math.max(12, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
-    const controlText = index === 0 ? "WASD • Bomb V" : "Arrow Keys • Bomb M";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.fillText(controlText, 10, 34);
+    ctx.fillText(`P${index + 1}`, 12, 18);
 
-    if (player.isEliminated || lives <= 0) {
-      ctx.fillStyle = "rgba(255, 120, 120, 0.75)";
-      ctx.font = `600 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.textAlign = "right";
-      ctx.fillText("DOWN", width - 10, 20);
-    } else {
-      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-      ctx.font = `500 ${Math.max(14, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.textAlign = "right";
-      ctx.fillText(`Lives ${lives}`, width - 10, 18);
+    const iconSpacing = 14;
+    const iconStart = width - iconSpacing * PLAYER_MAX_LIVES - 12;
+    for (let i = 0; i < PLAYER_MAX_LIVES; i += 1) {
+      const filled = i < lives;
+      const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
+      drawMiniFighter(ctx, iconStart + i * iconSpacing, 16, color);
     }
 
-    ctx.textAlign = "left";
-    ctx.translate(0, height - 20);
-    const barWidth = width - 80;
-    const barHeight = 10;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
-    ctx.fillRect(10, 0, barWidth, barHeight);
-    const health = player.isEliminated ? 0 : player.health;
-    const segmentWidth = (barWidth - (HEALTH_PER_LIFE - 1) * 2) / HEALTH_PER_LIFE;
+    const barX = 12;
+    const barY = height / 2 - 4;
+    const barWidth = width - 24;
+    const segmentSpacing = 4;
+    const segmentWidth = (barWidth - (HEALTH_PER_LIFE - 1) * segmentSpacing) / HEALTH_PER_LIFE;
     for (let i = 0; i < HEALTH_PER_LIFE; i += 1) {
-      ctx.fillStyle = i < health ? "#ff5f5f" : "rgba(255, 255, 255, 0.25)";
-      ctx.fillRect(10 + i * (segmentWidth + 2), 0, segmentWidth, barHeight);
+      ctx.fillStyle = i < health ? "#ff6161" : "rgba(255, 255, 255, 0.24)";
+      drawRoundedRect(
+        ctx,
+        barX + i * (segmentWidth + segmentSpacing),
+        barY,
+        segmentWidth,
+        8,
+        4,
+      );
+      ctx.fill();
     }
 
-    const bombBaseX = 10 + barWidth + 12;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-    for (let i = 0; i < player.bombCapacity; i += 1) {
-      ctx.beginPath();
-      ctx.arc(bombBaseX + i * 16, barHeight / 2, 6, 0, Math.PI * 2);
-      ctx.fillStyle = i < this.playerBombs[index] ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
+    const bombStartX = 12;
+    const bombY = height - 12;
+    for (let i = 0; i < capacity; i += 1) {
+      const filled = i < bombs;
+      const fillStyle = filled ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
+      drawMiniBomb(ctx, bombStartX + i * 16, bombY, fillStyle);
+    }
+
+    if (lives <= 0) {
+      ctx.fillStyle = "rgba(255, 96, 96, 0.22)";
+      drawRoundedRect(ctx, 0, 0, width, height, 14);
       ctx.fill();
+      ctx.fillStyle = "rgba(255, 228, 228, 0.85)";
+      ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.textAlign = "right";
+      ctx.fillText("DOWN", width - 12, 18);
+      ctx.textAlign = "left";
     }
 
     ctx.restore();
   }
 
-  renderBossHealth(ctx) {
+  renderBossHealth(ctx, topOffset = 140) {
+    if (!this.boss) return;
     ctx.save();
-    const width = this.game.width - 120;
-    const height = 16;
-    const x = 60;
-    const y = 12 + 156 + 12;
-    ctx.fillStyle = "rgba(5, 8, 16, 0.72)";
-    ctx.fillRect(x, y, width, height + 24);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-    ctx.font = `600 ${Math.max(20, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
+    const width = Math.max(240, this.game.width - 180);
+    const height = 46;
+    const x = (this.game.width - width) / 2;
+    const y = Math.max(topOffset, 16);
+    ctx.fillStyle = "rgba(8, 12, 22, 0.72)";
+    drawRoundedRect(ctx, x, y, width, height, 18);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+    ctx.font = `600 ${Math.max(16, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText("Boss Hull", this.game.width / 2, y + 20);
-    const ratio = this.boss.health / this.boss.maxHealth;
-    ctx.fillStyle = "#4fa8ff";
-    ctx.fillRect(x + 12, y + 28, (width - 24) * ratio, height);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.fillText("BOSS HULL", this.game.width / 2, y + 18);
+    const innerWidth = width - 40;
+    const barY = y + 26;
+    const ratio = Math.max(0, Math.min(1, this.boss.health / this.boss.maxHealth));
+    if (ratio > 0) {
+      ctx.fillStyle = "#4fa8ff";
+      drawRoundedRect(ctx, x + 20, barY, innerWidth * ratio, 12, 6);
+      ctx.fill();
+    }
     ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 12, y + 28, width - 24, height);
+    drawRoundedRect(ctx, x + 20, barY, innerWidth, 12, 6);
+    ctx.stroke();
     ctx.restore();
   }
 
   renderAudioHint(ctx) {
     ctx.save();
     const enabled = this.game.audio.enabled;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.font = `400 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "right";
     ctx.fillText(
-      `BGM: ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R)`,
-      this.game.width - 24,
-      this.game.height - 24,
+      `BGM ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R)`,
+      this.game.width - 20,
+      this.game.height - 20,
     );
     ctx.restore();
   }
 
   renderMetadata(ctx) {
     ctx.save();
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-    ctx.font = `600 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Cliff Wang", this.game.width - 24, 40);
-    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    const width = Math.min(200, this.game.width * 0.32);
+    const height = Math.max(50, this.game.height * 0.08);
+    const x = this.game.width - width - 16;
+    const y = 16;
+    ctx.fillStyle = "rgba(8, 12, 22, 0.7)";
+    drawRoundedRect(ctx, x, y, width, height, 16);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+    ctx.font = `600 ${Math.max(14, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("Cliff Wang", x + width / 2, y + 20);
+    ctx.font = `400 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.fillText("v1.0 • 2024-05-01", this.game.width - 24, 64);
+    ctx.fillText("v1.0 • 2024-05-01", x + width / 2, y + height - 16);
     ctx.restore();
   }
 
   renderLevelBanner(ctx) {
     ctx.save();
-    const progress = Math.min(1, this.levelBannerTimer / 3.2);
+    const progress = LEVEL_BANNER_DURATION > 0 ? Math.min(1, this.levelBannerTimer / LEVEL_BANNER_DURATION) : 1;
     ctx.globalAlpha = Math.sin(progress * Math.PI) * 0.85;
     ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-    ctx.font = `700 ${Math.max(36, this.game.width * 0.06)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.font = `700 ${Math.max(32, this.game.width * 0.056)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(this.levelBannerText, this.game.width / 2, this.game.height * 0.26);
-    ctx.font = `500 ${Math.max(18, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(this.levelBannerSubtitle, this.game.width / 2, this.game.height * 0.32 + 28);
+    ctx.fillText(this.levelBannerText, this.game.width / 2, this.game.height * 0.24);
+    ctx.font = `500 ${Math.max(16, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(this.levelBannerSubtitle, this.game.width / 2, this.game.height * 0.3 + 24);
     ctx.restore();
   }
 
   getActivePlayers() {
     const active = [];
-    for (let i = 0; i < PLAYER_COUNT; i += 1) {
+    for (let i = 0; i < this.players.length; i += 1) {
       if (this.playerLives[i] > 0 && !this.players[i].isEliminated) {
         active.push({ index: i, player: this.players[i] });
       }
@@ -948,8 +1039,9 @@ export class GameplayScene {
 
   layoutPlayers() {
     const baselineY = this.game.height - 96;
-    const spacing = this.game.width / (PLAYER_COUNT + 1);
-    for (let i = 0; i < PLAYER_COUNT; i += 1) {
+    const count = this.players.length || 1;
+    const spacing = this.game.width / (count + 1);
+    for (let i = 0; i < this.players.length; i += 1) {
       const player = this.players[i];
       const spawnX = spacing * (i + 1);
       player.setSpawnPosition(spawnX, baselineY);
@@ -957,8 +1049,61 @@ export class GameplayScene {
   }
 
   restartScene() {
-    this.game.setScene(new GameplayScene(this.game, this.difficulty));
+    this.game.setScene(new GameplayScene(this.game, this.difficulty, this.playerCount));
   }
+}
+
+function drawRoundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawMiniFighter(ctx, x, y, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.moveTo(0, -6);
+  ctx.lineTo(6, 5);
+  ctx.lineTo(-6, 5);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, -6);
+  ctx.lineTo(0, 6);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMiniBomb(ctx, x, y, fillStyle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-2.5, -5.5);
+  ctx.lineTo(2.5, -5.5);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
 }
 
 function pickStarColor(previousColor) {
