@@ -155,6 +155,11 @@ export class GameplayScene {
   update(dt) {
     const input = this.game.input;
 
+    if (input.wasKeyPressed("Escape")) {
+      this.game.returnToTitle();
+      return;
+    }
+
     if (input.wasKeyPressed("KeyR")) {
       this.restartScene();
       return;
@@ -362,7 +367,7 @@ export class GameplayScene {
 
   dropBossRewards() {
     if (!this.boss) return;
-    for (const type of ["bomb", "spread", "laser", "speed", "shield"]) {
+    for (const type of ["bomb", "spread", "laser", "speed", "shield", "health"]) {
       this.powerUps.push(
         new PowerUp({
           x: this.boss.x + randRange(-60, 60),
@@ -407,7 +412,7 @@ export class GameplayScene {
             amplitude: 18,
             frequency: 2.1,
             fireCooldown: 2.3,
-            dropType: i === 2 ? "spread" : null,
+            dropType: i === 2 ? randChoice(["spread", "health"]) : null,
           }),
         );
       }
@@ -455,7 +460,7 @@ export class GameplayScene {
             frequency: 3.2,
             fireCooldown: 1.3,
             burst: 2,
-            dropType: i === 3 ? "shield" : null,
+            dropType: i === 3 ? randChoice(["shield", "health"]) : null,
           }),
         );
       }
@@ -470,7 +475,7 @@ export class GameplayScene {
             frequency: 4.2,
             fireCooldown: 1.4,
             burst: 3,
-            dropType: i === 5 ? "laser" : i === 2 ? "speed" : null,
+            dropType: i === 5 ? "laser" : i === 2 ? randChoice(["speed", "health"]) : null,
           }),
         );
       }
@@ -489,7 +494,7 @@ export class GameplayScene {
             fireCooldown: 1.1,
             burst: 3,
             scoreValue: 220,
-            dropType: i === 1 ? "speed" : null,
+            dropType: i === 1 ? randChoice(["speed", "health"]) : null,
           }),
         );
       }
@@ -531,7 +536,7 @@ export class GameplayScene {
             frequency: 4.4,
             fireCooldown: 1.1,
             burst: 3,
-            dropType: i % 3 === 0 ? randChoice(["speed", "shield"]) : null,
+            dropType: i % 3 === 0 ? randChoice(["speed", "shield", "health"]) : null,
           }),
         );
       }
@@ -582,7 +587,7 @@ export class GameplayScene {
             burstSpread: 0.5,
             health: 6,
             speedY: 150,
-            dropType: i === 1 ? "laser" : i === 0 ? "spread" : null,
+            dropType: i === 1 ? "laser" : i === 0 ? "spread" : i === 2 ? "health" : null,
           }),
         );
       }
@@ -652,7 +657,7 @@ export class GameplayScene {
             if (enemy.dropType) {
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: enemy.dropType }));
             } else if (Math.random() < 0.032) {
-              const types = ["bomb", "spread", "laser", "speed", "shield"];
+              const types = ["bomb", "spread", "laser", "speed", "shield", "health"];
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: randChoice(types) }));
             }
           }
@@ -788,13 +793,20 @@ export class GameplayScene {
 
   renderHud(ctx) {
     ctx.save();
-    const scoreBottom = this.renderScorePanel(ctx);
-    const badgesBottom = this.renderPlayerBadges(ctx, scoreBottom + 10);
-    this.renderMetadata(ctx);
+    const topMargin = 16;
+    const scoreRect = this.renderScorePanel(ctx, topMargin);
+    const metadataInfo = { author: "Cliff Wang", version: "v1.0 • 2024-05-01" };
+    const { bottom: playerBottom, renderedMetadata } = this.renderPlayerPanels(ctx, topMargin, metadataInfo);
+    const metadataRect = renderedMetadata
+      ? this.players[1]
+        ? { top: topMargin, bottom: topMargin + 6 }
+        : { top: topMargin, bottom: Math.max(topMargin, playerBottom) }
+      : this.renderMetadata(ctx, topMargin);
     this.renderAudioHint(ctx);
 
     if (this.boss) {
-      const bossTop = Math.max(badgesBottom + 20, scoreBottom + 32);
+      const hudFloor = Math.max(scoreRect.bottom, metadataRect.bottom, playerBottom);
+      const bossTop = Math.max(hudFloor + 20, topMargin + 120);
       this.renderBossHealth(ctx, bossTop);
     } else if (this.bossWarningTimer > 0) {
       ctx.save();
@@ -821,11 +833,10 @@ export class GameplayScene {
     ctx.restore();
   }
 
-  renderScorePanel(ctx) {
-    const width = Math.min(220, this.game.width * 0.32);
-    const height = Math.max(52, this.game.height * 0.08);
-    const x = 16;
-    const y = 16;
+  renderScorePanel(ctx, y = 16) {
+    const width = Math.min(240, this.game.width * 0.32);
+    const height = Math.max(56, this.game.height * 0.082);
+    const x = (this.game.width - width) / 2;
     ctx.save();
     ctx.shadowColor = "rgba(90, 209, 255, 0.28)";
     ctx.shadowBlur = 18;
@@ -851,27 +862,38 @@ export class GameplayScene {
     ctx.font = `500 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillText(`${this.playerCount}P`, x + width - 16, y + height - 14);
     ctx.restore();
-    return y + height;
+    return { top: y, bottom: y + height };
   }
 
-  renderPlayerBadges(ctx, startY = 0) {
+  renderPlayerPanels(ctx, topY = 16, metadataInfo = null) {
     if (this.players.length === 0) {
-      return startY;
+      return { bottom: topY, renderedMetadata: false };
     }
-    const x = 16;
-    const width = Math.min(240, this.game.width * 0.36);
-    const height = Math.max(46, this.game.height * 0.065);
-    const gap = 10;
-    let bottom = startY;
-    for (let i = 0; i < this.players.length; i += 1) {
-      const y = startY + i * (height + gap);
-      this.renderPlayerBadge(ctx, i, x, y, width, height);
-      bottom = y + height;
+    const width = Math.min(250, this.game.width * 0.36);
+    const height = Math.max(64, this.game.height * 0.095);
+    let bottom = topY;
+    let renderedMetadata = false;
+
+    if (this.players[0]) {
+      this.renderPlayerBadge(ctx, 0, 16, topY, width, height);
+      bottom = Math.max(bottom, topY + height);
     }
-    return bottom;
+
+    if (this.players[1]) {
+      const rightX = this.game.width - width - 16;
+      this.renderPlayerBadge(ctx, 1, rightX, topY, width, height, metadataInfo);
+      bottom = Math.max(bottom, topY + height);
+      renderedMetadata = true;
+    } else if (metadataInfo) {
+      const rect = this.renderMetadata(ctx, topY);
+      bottom = Math.max(bottom, rect.bottom);
+      renderedMetadata = true;
+    }
+
+    return { bottom, renderedMetadata };
   }
 
-  renderPlayerBadge(ctx, index, x, y, width, height) {
+  renderPlayerBadge(ctx, index, x, y, width, height, metadataInfo) {
     const player = this.players[index];
     if (!player) return;
     const lives = this.playerLives[index] ?? 0;
@@ -899,12 +921,25 @@ export class GameplayScene {
     ctx.textAlign = "left";
     ctx.fillText(`P${index + 1}`, 12, 18);
 
+    if (metadataInfo && index === 1) {
+      ctx.save();
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+      ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(metadataInfo.author, width - 12, 18);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.font = `400 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(metadataInfo.version, width - 12, 34);
+      ctx.restore();
+    }
+
     const iconSpacing = 14;
     const iconStart = width - iconSpacing * PLAYER_MAX_LIVES - 12;
+    const lifeIconY = metadataInfo && index === 1 ? 40 : 16;
     for (let i = 0; i < PLAYER_MAX_LIVES; i += 1) {
       const filled = i < lives;
       const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
-      drawMiniFighter(ctx, iconStart + i * iconSpacing, 16, color);
+      drawMiniFighter(ctx, iconStart + i * iconSpacing, lifeIconY, color);
     }
 
     const barX = 12;
@@ -945,6 +980,7 @@ export class GameplayScene {
     }
 
     ctx.restore();
+    return y + height;
   }
 
   renderBossHealth(ctx, topOffset = 140) {
@@ -985,19 +1021,18 @@ export class GameplayScene {
     ctx.font = `400 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "right";
     ctx.fillText(
-      `BGM ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R)`,
+      `BGM ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R) • Title (Esc)`,
       this.game.width - 20,
       this.game.height - 20,
     );
     ctx.restore();
   }
 
-  renderMetadata(ctx) {
+  renderMetadata(ctx, y = 16) {
     ctx.save();
     const width = Math.min(200, this.game.width * 0.32);
-    const height = Math.max(50, this.game.height * 0.08);
+    const height = Math.max(50, this.game.height * 0.075);
     const x = this.game.width - width - 16;
-    const y = 16;
     ctx.fillStyle = "rgba(8, 12, 22, 0.7)";
     drawRoundedRect(ctx, x, y, width, height, 16);
     ctx.fill();
@@ -1012,6 +1047,7 @@ export class GameplayScene {
     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
     ctx.fillText("v1.0 • 2024-05-01", x + width / 2, y + height - 16);
     ctx.restore();
+    return { top: y, bottom: y + height };
   }
 
   renderLevelBanner(ctx) {

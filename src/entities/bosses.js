@@ -80,7 +80,7 @@ const BOSS_TYPES = [
             health: 4,
             speedY: 140,
             scoreValue: 250,
-            dropType: randChoice(["speed", "spread"]),
+            dropType: randChoice(["speed", "spread", "health"]),
           }),
         );
         spawns.push(
@@ -93,7 +93,7 @@ const BOSS_TYPES = [
             health: 4,
             speedY: 140,
             scoreValue: 250,
-            dropType: randChoice(["bomb", "shield", "laser"]),
+            dropType: randChoice(["bomb", "shield", "laser", "health"]),
           }),
         );
       }
@@ -147,7 +147,7 @@ const BOSS_TYPES = [
               health: 5,
               speedY: 120,
               scoreValue: 320,
-              dropType: randChoice(["bomb", "speed", "spread", "shield", "laser"]),
+              dropType: randChoice(["bomb", "speed", "spread", "shield", "laser", "health"]),
             }),
           );
         }
@@ -296,7 +296,7 @@ const BOSS_TYPES = [
             health: 5,
             speedY: 130,
             scoreValue: 280,
-            dropType: randChoice(["shield", "speed"]),
+            dropType: randChoice(["shield", "speed", "health"]),
           }),
         );
         spawns.push(
@@ -309,7 +309,7 @@ const BOSS_TYPES = [
             health: 5,
             speedY: 130,
             scoreValue: 280,
-            dropType: randChoice(["laser", "bomb"]),
+            dropType: randChoice(["laser", "bomb", "health"]),
           }),
         );
       }
@@ -365,7 +365,7 @@ const BOSS_TYPES = [
             health: 6,
             speedY: 150,
             scoreValue: 340,
-            dropType: randChoice(["bomb", "spread", "shield"]),
+            dropType: randChoice(["bomb", "spread", "shield", "health"]),
           }),
         );
       }

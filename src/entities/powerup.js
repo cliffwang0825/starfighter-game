@@ -6,6 +6,7 @@ const PALETTE = {
   spread: { base: "#ff7bd5", glow: "#ffc5f2", stroke: "#a2478e", detail: "#ffe8f8" },
   laser: { base: "#9f87ff", glow: "#e3dcff", stroke: "#4d3ab3", detail: "#f3f0ff" },
   shield: { base: "#6fb3ff", glow: "#c9e4ff", stroke: "#2d6cb2", detail: "#eff7ff" },
+  health: { base: "#ff6d7a", glow: "#ffb6bf", stroke: "#9e2a34", detail: "#ffe5e8" },
 };
 
 export class PowerUp {
@@ -83,6 +84,9 @@ function drawPowerupIcon(ctx, type, palette) {
     case "laser":
       drawLaserIcon(ctx, palette);
       break;
+    case "health":
+      drawHealthIcon(ctx, palette);
+      break;
     case "shield":
     default:
       drawShieldIcon(ctx, palette);
@@ -92,82 +96,122 @@ function drawPowerupIcon(ctx, type, palette) {
 
 function drawBombIcon(ctx, palette) {
   ctx.save();
-  ctx.fillStyle = palette.base;
   ctx.strokeStyle = palette.stroke;
   ctx.lineWidth = 2;
+  ctx.fillStyle = palette.base;
   ctx.beginPath();
-  ctx.ellipse(0, 4, 8, 10, 0, 0, Math.PI * 2);
+  const spikes = 7;
+  const outer = 12;
+  const inner = 5;
+  for (let i = 0; i < spikes * 2; i += 1) {
+    const angle = (Math.PI / spikes) * i;
+    const radius = i % 2 === 0 ? outer : inner;
+    const px = Math.cos(angle) * radius;
+    const py = Math.sin(angle) * radius;
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-5, -4);
-  ctx.quadraticCurveTo(0, -9, 5, -4);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, -4);
-  ctx.lineTo(0, -12);
-  ctx.strokeStyle = palette.detail;
-  ctx.lineWidth = 2;
-  ctx.lineCap = "round";
-  ctx.stroke();
+  ctx.fillStyle = palette.detail;
+  ctx.font = "700 14px 'Inter', 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("B", 0, 0);
   ctx.restore();
 }
 
 function drawSpeedIcon(ctx, palette) {
   ctx.save();
-  ctx.fillStyle = palette.base;
-  ctx.strokeStyle = palette.stroke;
   ctx.lineWidth = 2;
+  ctx.strokeStyle = palette.stroke;
+  const noseWidth = 12;
+  const noseHeight = 16;
+  for (let i = -1; i <= 1; i += 1) {
+    ctx.save();
+    ctx.translate(i * 6, 2 - Math.abs(i) * 2);
+    ctx.fillStyle = palette.base;
+    ctx.beginPath();
+    ctx.moveTo(0, -noseHeight / 2);
+    ctx.lineTo(noseWidth / 2, noseHeight / 2);
+    ctx.lineTo(-noseWidth / 2, noseHeight / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.fillStyle = palette.detail;
+  ctx.globalAlpha = 0.85;
   ctx.beginPath();
-  ctx.moveTo(-10, 4);
-  ctx.lineTo(6, 4);
-  ctx.lineTo(11, 0);
-  ctx.lineTo(6, -4);
-  ctx.lineTo(-10, -4);
-  ctx.closePath();
+  ctx.ellipse(0, 6, 10, 5, 0, 0, Math.PI);
   ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = palette.detail;
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.moveTo(-12, -1);
-  ctx.lineTo(-4, -1);
-  ctx.moveTo(-12, 1);
-  ctx.lineTo(-6, 1);
-  ctx.stroke();
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
 function drawSpreadIcon(ctx, palette) {
   ctx.save();
-  ctx.fillStyle = palette.base;
   ctx.strokeStyle = palette.stroke;
-  ctx.lineWidth = 1.5;
+  ctx.fillStyle = palette.base;
+  ctx.lineWidth = 2;
   for (let i = -1; i <= 1; i += 1) {
     ctx.beginPath();
-    ctx.moveTo(i * 5, -6);
-    ctx.lineTo(i * 5 + 6, 4);
-    ctx.lineTo(i * 5 - 6, 4);
+    ctx.moveTo(i * 6, 10);
+    ctx.lineTo(i * 12 - 3, -8);
+    ctx.quadraticCurveTo(i * 6, -14, i * 12 + 3, -8);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
   }
+  ctx.fillStyle = palette.detail;
+  ctx.font = "700 14px 'Inter', 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("S", 0, 2);
   ctx.restore();
 }
 
 function drawLaserIcon(ctx, palette) {
   ctx.save();
-  const gradient = ctx.createLinearGradient(0, -10, 0, 10);
+  const gradient = ctx.createLinearGradient(-14, 0, 14, 0);
   gradient.addColorStop(0, palette.detail);
   gradient.addColorStop(0.5, palette.base);
   gradient.addColorStop(1, palette.detail);
   ctx.fillStyle = gradient;
-  drawRoundedRectPath(ctx, -4, -10, 8, 20, 4);
+  drawRoundedRectPath(ctx, -14, -4, 28, 8, 4);
   ctx.fill();
   ctx.strokeStyle = palette.stroke;
-  ctx.lineWidth = 2;
-  drawRoundedRectPath(ctx, -5, -12, 10, 24, 5);
+  ctx.lineWidth = 2.2;
+  drawRoundedRectPath(ctx, -16, -6, 32, 12, 6);
   ctx.stroke();
+  ctx.fillStyle = palette.detail;
+  ctx.font = "700 14px 'Inter', 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("L", 0, 0);
+  ctx.restore();
+}
+
+function drawHealthIcon(ctx, palette) {
+  ctx.save();
+  ctx.fillStyle = palette.base;
+  ctx.strokeStyle = palette.stroke;
+  ctx.lineWidth = 2;
+  drawRoundedRectPath(ctx, -5, -12, 10, 24, 3);
+  ctx.fill();
+  ctx.stroke();
+  drawRoundedRectPath(ctx, -12, -5, 24, 10, 3);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = palette.detail;
+  ctx.font = "700 13px 'Inter', 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("H", 0, 0);
   ctx.restore();
 }
 
@@ -175,18 +219,23 @@ function drawShieldIcon(ctx, palette) {
   ctx.save();
   ctx.fillStyle = palette.base;
   ctx.strokeStyle = palette.stroke;
-  ctx.lineWidth = 2;
-  drawRoundedRectPath(ctx, -8, -8, 16, 16, 4);
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.quadraticCurveTo(10, -9, 9, -2);
+  ctx.quadraticCurveTo(0, 12, 0, 12);
+  ctx.lineTo(-9, -2);
+  ctx.quadraticCurveTo(-10, -9, 0, -12);
+  ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(-5, -10);
-  ctx.lineTo(-2, -14);
-  ctx.lineTo(2, -14);
-  ctx.lineTo(5, -10);
-  ctx.stroke();
   ctx.fillStyle = palette.detail;
-  drawRoundedRectPath(ctx, -5, -3, 10, 6, 2);
+  ctx.beginPath();
+  ctx.moveTo(0, -8);
+  ctx.quadraticCurveTo(6, -6, 5.5, -1);
+  ctx.quadraticCurveTo(0, 6, 0, 6);
+  ctx.quadraticCurveTo(-5.5, -1, -6, -6);
+  ctx.closePath();
   ctx.fill();
   ctx.restore();
 }

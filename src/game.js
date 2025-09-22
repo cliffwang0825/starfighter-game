@@ -23,6 +23,7 @@ export class Game {
     window.addEventListener("resize", () => this.resize());
     this.resize();
     this.setScene(new TitleScene(this));
+    this.audio.setMusicStage(0);
     this.start();
   }
 
@@ -49,6 +50,11 @@ export class Game {
     if (this.scene?.onResize) {
       this.scene.onResize();
     }
+  }
+
+  returnToTitle() {
+    this.audio.setMusicStage(0);
+    this.setScene(new TitleScene(this));
   }
 
   start() {

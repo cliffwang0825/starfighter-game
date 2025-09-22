@@ -243,6 +243,9 @@ export class Player {
         this.spreadTimer = 0;
         this.updateDerivedStats();
         break;
+      case "health":
+        this.heal(1);
+        break;
       case "shield":
         this.heal(1);
         this.shieldTimer = 8;

@@ -141,7 +141,7 @@ export class TitleScene {
     const gap = Math.min(32, this.game.width * 0.04);
     const totalWidth = count * optionWidth + (count - 1) * gap;
     const startX = (this.game.width - totalWidth) / 2;
-    const y = this.game.height * 0.56;
+    const y = this.game.height * 0.52;
     const layout = [];
     for (let i = 0; i < count; i += 1) {
       layout.push({
@@ -162,7 +162,11 @@ export class TitleScene {
     const gap = Math.min(28, this.game.width * 0.038);
     const totalWidth = count * optionWidth + (count - 1) * gap;
     const startX = (this.game.width - totalWidth) / 2;
-    const y = this.game.height * 0.66;
+    const diffHeight = Math.max(90, this.game.height * 0.14);
+    const diffY = this.game.height * 0.52;
+    const diffBottom = diffY + diffHeight;
+    const minY = diffBottom + Math.min(48, this.game.height * 0.07);
+    const y = Math.max(this.game.height * 0.7, minY);
     const layout = [];
     for (let i = 0; i < count; i += 1) {
       layout.push({
