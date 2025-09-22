@@ -1,13 +1,19 @@
-const MOVEMENT_KEYS = new Map([
-  ["ArrowUp", { x: 0, y: -1 }],
-  ["KeyW", { x: 0, y: -1 }],
-  ["ArrowDown", { x: 0, y: 1 }],
-  ["KeyS", { x: 0, y: 1 }],
-  ["ArrowLeft", { x: -1, y: 0 }],
-  ["KeyA", { x: -1, y: 0 }],
-  ["ArrowRight", { x: 1, y: 0 }],
-  ["KeyD", { x: 1, y: 0 }],
-]);
+const PLAYER_MOVEMENT_KEYS = [
+  new Map([
+    ["KeyW", { x: 0, y: -1 }],
+    ["KeyS", { x: 0, y: 1 }],
+    ["KeyA", { x: -1, y: 0 }],
+    ["KeyD", { x: 1, y: 0 }],
+  ]),
+  new Map([
+    ["ArrowUp", { x: 0, y: -1 }],
+    ["ArrowDown", { x: 0, y: 1 }],
+    ["ArrowLeft", { x: -1, y: 0 }],
+    ["ArrowRight", { x: 1, y: 0 }],
+  ]),
+];
+
+const PLAYER_BOMB_KEYS = [["KeyV"], ["KeyM"]];
 
 export class InputManager {
   constructor(canvas) {
@@ -141,10 +147,11 @@ export class InputManager {
     return false;
   }
 
-  getMovementVector() {
+  getMovementVectorForPlayer(playerIndex = 0) {
+    const layout = PLAYER_MOVEMENT_KEYS[playerIndex] ?? PLAYER_MOVEMENT_KEYS[0];
     let x = 0;
     let y = 0;
-    for (const [code, vector] of MOVEMENT_KEYS) {
+    for (const [code, vector] of layout) {
       if (this.keysDown.has(code)) {
         x += vector.x;
         y += vector.y;
@@ -157,13 +164,13 @@ export class InputManager {
     return { x: 0, y: 0 };
   }
 
-  isFiring() {
-    return (
-      this.pointer.active ||
-      this.isKeyDown("Space") ||
-      this.isKeyDown("KeyZ") ||
-      this.isKeyDown("Enter")
-    );
+  getMovementVector() {
+    return this.getMovementVectorForPlayer(0);
+  }
+
+  wasBombPressed(playerIndex = 0) {
+    const keys = PLAYER_BOMB_KEYS[playerIndex] ?? PLAYER_BOMB_KEYS[0];
+    return keys.some((code) => this.wasKeyPressed(code));
   }
 
   consumeConfirm() {

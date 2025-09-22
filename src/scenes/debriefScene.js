@@ -25,7 +25,7 @@ export class DebriefScene {
     if (this.game.input.wasKeyPressed("Escape")) {
       this.game.setScene(new TitleScene(this.game));
     }
-    if (this.game.input.wasKeyPressed("KeyM")) {
+    if (this.game.input.wasKeyPressed("KeyN")) {
       this.game.audio.toggleMute();
     }
   }

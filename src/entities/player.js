@@ -1,9 +1,13 @@
 import { clamp, lerp } from "../utils.js";
 
+const MODEL_RADIUS = 16.5;
+const DEFAULT_RADIUS = MODEL_RADIUS * 0.8;
+
 export class Player {
-  constructor(game) {
+  constructor(game, options = {}) {
     this.game = game;
-    this.radius = 16.5;
+    this.playerIndex = options.playerIndex ?? 0;
+    this.radius = DEFAULT_RADIUS;
     this.baseSpeed = 340;
     this.speed = this.baseSpeed;
     this.maxHealth = 3;
@@ -20,12 +24,16 @@ export class Player {
     this.bombCapacity = 2;
     this.fireTimer = 0;
     this.invulnerableTimer = 0;
+    this.spawnX = options.spawnX ?? this.game.width / 2;
+    this.spawnY = options.spawnY ?? this.game.height - 96;
+    this.palette = options.palette ?? this.getPaletteForIndex(this.playerIndex);
+    this.isEliminated = false;
     this.reset();
   }
 
   reset() {
-    this.x = this.game.width / 2;
-    this.y = this.game.height - 96;
+    this.x = this.spawnX;
+    this.y = this.spawnY;
     this.velocityX = 0;
     this.velocityY = 0;
     this.fireTimer = 0;
@@ -37,10 +45,25 @@ export class Player {
     this.laserTimer = 0;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
+    this.invulnerableTimer = 0;
+    this.isEliminated = false;
     this.updateDerivedStats();
   }
 
+  setSpawnPosition(x, y) {
+    this.spawnX = x;
+    this.spawnY = y;
+    if (!this.isEliminated) {
+      this.x = x;
+      this.y = y;
+    }
+  }
+
   update(dt, input) {
+    if (this.isEliminated || this.health <= 0) {
+      return [];
+    }
+
     if (this.speedBoostTimer > 0) {
       this.speedBoostTimer = Math.max(0, this.speedBoostTimer - dt);
       if (this.speedBoostTimer === 0) {
@@ -74,11 +97,11 @@ export class Player {
       this.shieldTimer = Math.max(0, this.shieldTimer - dt);
     }
 
-    const keyboardMove = input.getMovementVector();
+    const keyboardMove = input.getMovementVectorForPlayer(this.playerIndex);
     let moveX = keyboardMove.x;
     let moveY = keyboardMove.y;
 
-    if (input.pointer.active) {
+    if (this.playerIndex === 0 && input.pointer.active) {
       const dx = input.pointer.x - this.x;
       const dy = input.pointer.y - this.y;
       const dist = Math.hypot(dx, dy);
@@ -105,11 +128,11 @@ export class Player {
     }
 
     if (this.fireTimer > 0) {
-      this.fireTimer -= dt;
+      this.fireTimer = Math.max(0, this.fireTimer - dt);
     }
 
     const fired = [];
-    if (input.isFiring() && this.fireTimer <= 0) {
+    if (this.fireTimer <= 0) {
       this.fireTimer = this.fireCooldown;
       if (this.weaponMode === "laser" && this.laserLevel > 0) {
         const beams = this.laserLevel === 1 ? 1 : this.laserLevel === 2 ? 2 : 3;
@@ -124,6 +147,7 @@ export class Player {
             radius: 6 + this.laserLevel,
             friendly: true,
             damage: 2 + this.laserLevel,
+            owner: this.playerIndex,
             type: "laser",
           });
         }
@@ -154,10 +178,13 @@ export class Player {
             radius: 4,
             friendly: true,
             damage: 1,
+            owner: this.playerIndex,
           });
         }
       }
-      this.game.audio.playShot();
+      if (fired.length > 0) {
+        this.game.audio.playShot();
+      }
     }
 
     return fired;
@@ -226,14 +253,20 @@ export class Player {
     return null;
   }
 
+  eliminate() {
+    this.isEliminated = true;
+    this.health = 0;
+  }
+
   get isInvulnerable() {
     return this.invulnerableTimer > 0 || this.shieldTimer > 0;
   }
 
   render(ctx) {
+    if (this.isEliminated) return;
     ctx.save();
     ctx.translate(this.x, this.y);
-    const scale = this.radius / 16.5;
+    const scale = this.radius / MODEL_RADIUS;
 
     if (this.isInvulnerable) {
       ctx.save();
@@ -248,10 +281,10 @@ export class Player {
     }
 
     const bodyGradient = ctx.createLinearGradient(0, -40 * scale, 0, 36 * scale);
-    bodyGradient.addColorStop(0, "#ffffff");
-    bodyGradient.addColorStop(0.4, "#ffeaea");
-    bodyGradient.addColorStop(0.7, "#d51928");
-    bodyGradient.addColorStop(1, "#6c0b17");
+    bodyGradient.addColorStop(0, this.palette.top ?? "#ffffff");
+    bodyGradient.addColorStop(0.4, this.palette.mid ?? "#ffeaea");
+    bodyGradient.addColorStop(0.7, this.palette.base ?? "#d51928");
+    bodyGradient.addColorStop(1, this.palette.shadow ?? "#6c0b17");
     ctx.fillStyle = bodyGradient;
     ctx.beginPath();
     ctx.moveTo(0, -42 * scale);
@@ -263,9 +296,9 @@ export class Player {
     ctx.fill();
 
     const wingGradient = ctx.createLinearGradient(0, -12 * scale, 0, 36 * scale);
-    wingGradient.addColorStop(0, "#f6f6f8");
-    wingGradient.addColorStop(0.6, "#b60e1b");
-    wingGradient.addColorStop(1, "#420208");
+    wingGradient.addColorStop(0, this.palette.wingHighlight ?? "#f6f6f8");
+    wingGradient.addColorStop(0.6, this.palette.wingBase ?? "#b60e1b");
+    wingGradient.addColorStop(1, this.palette.wingShadow ?? "#420208");
     ctx.fillStyle = wingGradient;
     ctx.beginPath();
     ctx.moveTo(-30 * scale, -4 * scale);
@@ -284,9 +317,9 @@ export class Player {
     ctx.fill();
 
     const canopy = ctx.createLinearGradient(0, -12 * scale, 0, 10 * scale);
-    canopy.addColorStop(0, "rgba(180, 220, 255, 0.95)");
-    canopy.addColorStop(0.5, "rgba(70, 140, 220, 0.85)");
-    canopy.addColorStop(1, "rgba(20, 40, 80, 0.9)");
+    canopy.addColorStop(0, this.palette.canopyHighlight ?? "rgba(180, 220, 255, 0.95)");
+    canopy.addColorStop(0.5, this.palette.canopyMid ?? "rgba(70, 140, 220, 0.85)");
+    canopy.addColorStop(1, this.palette.canopyShadow ?? "rgba(20, 40, 80, 0.9)");
     ctx.fillStyle = canopy;
     ctx.beginPath();
     ctx.ellipse(0, -4 * scale, 16 * scale, 18 * scale, 0, 0, Math.PI * 2);
@@ -298,14 +331,49 @@ export class Player {
     ctx.fill();
 
     const engineGlow = ctx.createRadialGradient(0, 32 * scale, 2 * scale, 0, 32 * scale, 18 * scale);
-    engineGlow.addColorStop(0, "rgba(255, 180, 120, 0.9)");
-    engineGlow.addColorStop(0.6, "rgba(255, 120, 40, 0.35)");
-    engineGlow.addColorStop(1, "rgba(255, 80, 0, 0)");
+    engineGlow.addColorStop(0, this.palette.engineCore ?? "rgba(255, 180, 120, 0.9)");
+    engineGlow.addColorStop(0.6, this.palette.engineMid ?? "rgba(255, 120, 40, 0.35)");
+    engineGlow.addColorStop(1, this.palette.engineEdge ?? "rgba(255, 80, 0, 0)");
     ctx.fillStyle = engineGlow;
     ctx.beginPath();
     ctx.ellipse(0, 32 * scale, 18 * scale, 12 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
+  }
+
+  getPaletteForIndex(index) {
+    if (index === 1) {
+      return {
+        top: "#e4f4ff",
+        mid: "#cfd8ff",
+        base: "#2c4fd8",
+        shadow: "#081038",
+        wingHighlight: "#e2e9ff",
+        wingBase: "#1e3aa8",
+        wingShadow: "#040924",
+        canopyHighlight: "rgba(255, 200, 200, 0.95)",
+        canopyMid: "rgba(240, 120, 140, 0.85)",
+        canopyShadow: "rgba(130, 40, 60, 0.9)",
+        engineCore: "rgba(130, 220, 255, 0.9)",
+        engineMid: "rgba(80, 170, 255, 0.35)",
+        engineEdge: "rgba(30, 110, 255, 0)",
+      };
+    }
+    return {
+      top: "#ffffff",
+      mid: "#ffeaea",
+      base: "#d51928",
+      shadow: "#6c0b17",
+      wingHighlight: "#f6f6f8",
+      wingBase: "#b60e1b",
+      wingShadow: "#420208",
+      canopyHighlight: "rgba(180, 220, 255, 0.95)",
+      canopyMid: "rgba(70, 140, 220, 0.85)",
+      canopyShadow: "rgba(20, 40, 80, 0.9)",
+      engineCore: "rgba(255, 180, 120, 0.9)",
+      engineMid: "rgba(255, 120, 40, 0.35)",
+      engineEdge: "rgba(255, 80, 0, 0)",
+    };
   }
 }

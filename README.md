@@ -1,6 +1,6 @@
 # Starfighter Game
 
-Starfighter is a responsive vertical scrolling shooter that runs entirely in the browser. The project targets 60 FPS with device-pixel-ratio aware rendering so the action looks crisp on desktops, tablets, and phones. Keyboard controls work out of the box, while touch players can drag anywhere on the screen to steer and fire. Boss encounters, screen-clearing bombs, and collectible power-ups build an arcade-style loop that scales in difficulty across multiple sectors.
+Starfighter is a responsive vertical scrolling shooter that runs entirely in the browser. The project targets 60 FPS with device-pixel-ratio aware rendering so the action looks crisp on desktops, tablets, and phones. Two pilots can sortie at once on the same keyboard with always-on auto-fire, while touch players can drag anywhere on the screen to steer and trigger bombs. Boss encounters, screen-clearing ordnance, and collectible power-ups build an arcade-style loop that scales in difficulty across multiple sectors.
 
 ## Project Structure
 
@@ -37,11 +37,11 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 
 ## Controls
 
-| Platform | Action |
+| Mode | Action |
 | --- | --- |
-| Keyboard | WASD / Arrow keys to move, Space or Enter to fire, **X / B / Shift** to deploy a bomb, Enter / Space to confirm, **← / →** at the title screen to change difficulty |
-| Touch & Mouse | Drag to steer and fire, double-tap to drop a bomb, tap to confirm |
-| All | Press **M** to toggle music and SFX |
+| Keyboard Co-op | **Player 1** – WASD to move, **V** to deploy bombs. **Player 2** – Arrow keys to move, **M** to deploy bombs. Shots auto-fire automatically; both pilots keep three-hit hulls with three lives each. |
+| Touch & Mouse | Drag anywhere to steer Player 1 with auto-fire enabled. Double-tap (or tap twice quickly) to release a bomb. Tap to confirm menus. |
+| All | Enter / Space to confirm on keyboard. Press **P** to pause, **R** to restart the mission, and **N** to toggle music and SFX. |
 
 ## Performance & UX Features
 
@@ -50,6 +50,9 @@ Starfighter is a responsive vertical scrolling shooter that runs entirely in the
 - **Responsive layout** adapts the canvas to portrait or landscape orientations up to tablet-sized viewports.
 - **Touch-friendly gestures** leverage pointer events with subtle smoothing for accurate mobile control, including a double-tap bomb gesture on phones and tablets.
 - **Boss escalations & level theming** cycle through changing nebula palettes with dimmer starfields, randomized star colours per sector, and multi-phase boss ships that echo Star Wars-inspired silhouettes with metallic specular highlights.
+- **Rotating boss roster** now spans ten distinct capital ships, each with bespoke attack scripts and metallic silhouettes that rotate through red, white, purple, blue, and gold palettes.
+- **Expanded enemy roster** introduces strafing interceptors and bombing wings with unique flight paths and projectile patterns for greater mid-wave variety.
+- **Simultaneous co-op** keeps two players active at once with always-on cannons, per-pilot bombs, and respawn invulnerability for the surviving partner.
 - **Difficulty presets** (Easy/Medium/Hard) tune enemy durability, projectile density, spawn cadence, and boss aggression so the opening patrol is approachable while the hard setting becomes a bullet-hell gauntlet.
 - **Power-ups and bombs** introduce screen-clearing ordnance, shield boosts, speed bursts, a three-tier spread cannon, and a piercing laser cannon to help players survive three hits per life across three lives.
 - **HUD metadata** keeps the author credit (Cliff Wang), semantic version, and release date visible alongside score, lives, hull, and bomb counts.

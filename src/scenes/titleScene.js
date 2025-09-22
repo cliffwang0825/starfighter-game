@@ -41,7 +41,7 @@ export class TitleScene {
       this.startGame();
     }
 
-    if (input.wasKeyPressed("KeyM")) {
+    if (input.wasKeyPressed("KeyN")) {
       this.game.audio.toggleMute();
     }
   }
@@ -74,8 +74,12 @@ export class TitleScene {
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
     ctx.font = `400 ${Math.max(16, this.game.width * 0.025)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Tap outside to deploy • ←/→ to choose", this.game.width / 2, this.game.height * 0.78);
-    ctx.fillText("Press Enter / Space to launch", this.game.width / 2, this.game.height * 0.84);
+    ctx.fillText("P1: WASD • Bomb V   |   P2: Arrow Keys • Bomb M", this.game.width / 2, this.game.height * 0.78);
+    ctx.fillText(
+      "Press Enter / Space to launch • Auto-fire ready • Double-tap for bomb • Pause P • Restart R • Mute N",
+      this.game.width / 2,
+      this.game.height * 0.84,
+    );
 
     const best = this.game.storage.bestScore;
     if (best > 0) {

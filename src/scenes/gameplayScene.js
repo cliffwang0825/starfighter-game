@@ -1,10 +1,10 @@
 import { Explosion } from "../effects/explosion.js";
 import { Starfield } from "../effects/starfield.js";
 import { updateBullets, renderBullets } from "../entities/bullet.js";
-import { Enemy } from "../entities/enemy.js";
+import { Enemy, StrafeEnemy, BomberEnemy } from "../entities/enemy.js";
 import { Player } from "../entities/player.js";
 import { PowerUp } from "../entities/powerup.js";
-import { Boss, resetBossPaletteCycle } from "../entities/bosses.js";
+import { Boss, resetBossPaletteCycle, BOSS_COUNT } from "../entities/bosses.js";
 import { distanceSquared, randChoice, randRange } from "../utils.js";
 import { DebriefScene } from "./debriefScene.js";
 
@@ -56,10 +56,11 @@ const STAR_COLOR_CHOICES = [
 ];
 
 const PLAYER_MAX_LIVES = 3;
-const COLLISION_RADIUS = 24;
+const PLAYER_COLLISION_RADIUS = 19;
 const HEALTH_PER_LIFE = 3;
 const BOMB_DAMAGE = 18;
 const BOMB_COOLDOWN = 0.8;
+const PLAYER_COUNT = 2;
 
 const STAGES = [
   {
@@ -94,9 +95,11 @@ export class GameplayScene {
     this.difficulty = difficulty ?? DIFFICULTY_PRESETS[1];
     this.starfield = new Starfield(game, 220);
     this.starfield.setBrightness(0.5);
-    this.player = new Player(game);
-    this.playerLives = PLAYER_MAX_LIVES;
-    this.playerBombs = this.player.bombCapacity;
+    this.players = Array.from({ length: PLAYER_COUNT }, (_, index) => new Player(game, { playerIndex: index }));
+    this.playerLives = Array.from({ length: PLAYER_COUNT }, () => PLAYER_MAX_LIVES);
+    this.playerBombs = this.players.map((player) => player.bombCapacity);
+    this.bombTimers = new Array(PLAYER_COUNT).fill(0);
+    this.activePlayerCount = PLAYER_COUNT;
     this.score = 0;
     this.time = 0;
     this.stageIndex = 0;
@@ -106,12 +109,13 @@ export class GameplayScene {
     this.boss = null;
     this.bossWarningTimer = 0;
     this.bossSpawned = false;
-    this.bombTimer = 0;
     this.bombFlashTimer = 0;
     this.levelBannerTimer = 0;
     this.levelBannerText = "";
     this.levelBannerSubtitle = "";
     this.currentStarColor = null;
+    this.paused = false;
+    this.bossCycleIndex = 0;
 
     this.playerBullets = [];
     this.enemyBullets = [];
@@ -121,16 +125,50 @@ export class GameplayScene {
 
     resetBossPaletteCycle();
     this.applyStagePalette(STAGES[this.stageIndex]);
+    this.layoutPlayers();
+    this.players.forEach((player) => player.reset());
     this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay) * this.difficulty.spawnDelayMultiplier;
     this.game.audio.setMusicStage(0);
   }
 
   onResize() {
     this.starfield.onResize();
-    this.player.reset();
+    this.layoutPlayers();
+    this.players.forEach((player, index) => {
+      if (this.playerLives[index] > 0) {
+        player.reset();
+        player.invulnerableTimer = 1.5;
+      } else {
+        player.eliminate();
+      }
+    });
+    this.activePlayerCount = this.getActivePlayers().length;
   }
 
   update(dt) {
+    const input = this.game.input;
+
+    if (input.wasKeyPressed("KeyR")) {
+      this.restartScene();
+      return;
+    }
+
+    if (input.wasKeyPressed("KeyP")) {
+      this.paused = !this.paused;
+      if (!this.paused) {
+        this.game.audio.resume();
+      }
+    }
+
+    if (input.wasKeyPressed("KeyN")) {
+      this.game.audio.toggleMute();
+    }
+
+    if (this.paused) {
+      this.starfield.update(dt * 0.5);
+      return;
+    }
+
     this.time += dt;
     this.stageTime += dt;
     this.starfield.update(dt);
@@ -138,14 +176,17 @@ export class GameplayScene {
       this.levelBannerTimer = Math.max(0, this.levelBannerTimer - dt);
     }
 
-    const fired = this.player.update(dt, this.game.input);
-    this.playerBullets.push(...fired);
-
-    this.handleBombInput(dt);
-
-    if (this.game.input.wasKeyPressed("KeyM")) {
-      this.game.audio.toggleMute();
+    const activePlayers = this.getActivePlayers();
+    this.activePlayerCount = activePlayers.length;
+    const playerRefs = activePlayers.map(({ player }) => player);
+    for (const { player } of activePlayers) {
+      const fired = player.update(dt, input);
+      if (fired.length) {
+        this.playerBullets.push(...fired);
+      }
     }
+
+    this.handleBombInput(dt, activePlayers);
 
     this.waveTimer += dt;
     if (!this.boss && this.stageTime < 30 && this.waveTimer >= this.spawnDelay) {
@@ -170,7 +211,7 @@ export class GameplayScene {
     }
 
     if (this.boss) {
-      const { bullets, spawns } = this.boss.update(dt, this.player);
+      const { bullets, spawns } = this.boss.update(dt, playerRefs);
       if (bullets?.length) {
         this.enemyBullets.push(...bullets);
       }
@@ -190,7 +231,9 @@ export class GameplayScene {
       this.game.audio.playBossWarning();
       this.game.audio.setMusicStage(this.stageIndex + 1);
       this.bossSpawned = true;
-      this.boss = new Boss(this.game, this.stageIndex, this.difficulty);
+      const bossIndex = this.bossCycleIndex % BOSS_COUNT;
+      this.boss = new Boss(this.game, bossIndex, this.difficulty);
+      this.bossCycleIndex = (this.bossCycleIndex + 1) % BOSS_COUNT;
     }
 
     if (this.bossWarningTimer > 0) {
@@ -207,19 +250,22 @@ export class GameplayScene {
         this.powerUps.splice(i, 1);
         continue;
       }
-      const distSq = distanceSquared(powerUp.x, powerUp.y, this.player.x, this.player.y);
-      if (distSq < (powerUp.radius + this.player.radius) ** 2) {
-        const payload = this.player.applyPowerUp(powerUp.type);
-        if (payload === "bomb") {
-          this.playerBombs = Math.min(this.player.bombCapacity, this.playerBombs + 1);
+      for (const { index, player } of activePlayers) {
+        const distSq = distanceSquared(powerUp.x, powerUp.y, player.x, player.y);
+        if (distSq < (powerUp.radius + player.radius) ** 2) {
+          const payload = player.applyPowerUp(powerUp.type);
+          if (payload === "bomb") {
+            this.playerBombs[index] = Math.min(player.bombCapacity, this.playerBombs[index] + 1);
+          }
+          this.game.audio.playPowerUp();
+          this.effects.push(new Explosion(powerUp.x, powerUp.y, "#bdeaff", 36));
+          this.powerUps.splice(i, 1);
+          break;
         }
-        this.game.audio.playPowerUp();
-        this.effects.push(new Explosion(powerUp.x, powerUp.y, "#bdeaff", 36));
-        this.powerUps.splice(i, 1);
       }
     }
 
-    this.handleCollisions();
+    this.handleCollisions(activePlayers);
 
     for (let i = this.effects.length - 1; i >= 0; i -= 1) {
       const alive = this.effects[i].update(dt);
@@ -229,31 +275,34 @@ export class GameplayScene {
     }
   }
 
-  handleBombInput(dt) {
-    if (this.bombTimer > 0) {
-      this.bombTimer = Math.max(0, this.bombTimer - dt);
+  handleBombInput(dt, activePlayers) {
+    for (let i = 0; i < this.bombTimers.length; i += 1) {
+      this.bombTimers[i] = Math.max(0, this.bombTimers[i] - dt);
     }
     if (this.bombFlashTimer > 0) {
       this.bombFlashTimer = Math.max(0, this.bombFlashTimer - dt);
     }
     const input = this.game.input;
-    const bombRequested =
-      input.wasKeyPressed("KeyX") ||
-      input.wasKeyPressed("KeyB") ||
-      input.wasKeyPressed("ShiftLeft") ||
-      input.consumeDoubleTap();
-    if (bombRequested && this.playerBombs > 0 && this.bombTimer <= 0) {
-      this.activateBomb();
+    const doubleTap = input.consumeDoubleTap();
+    for (const { index } of activePlayers) {
+      if (this.playerBombs[index] <= 0 || this.bombTimers[index] > 0) continue;
+      const requested = input.wasBombPressed(index) || (index === 0 && doubleTap);
+      if (requested) {
+        this.activateBomb(index);
+      }
     }
   }
 
-  activateBomb() {
-    this.playerBombs -= 1;
-    this.bombTimer = BOMB_COOLDOWN;
+  activateBomb(playerIndex) {
+    const player = this.players[playerIndex];
+    if (!player || player.isEliminated) return;
+    this.playerBombs[playerIndex] -= 1;
+    this.bombTimers[playerIndex] = BOMB_COOLDOWN;
     this.bombFlashTimer = 0.6;
     this.game.audio.playBomb();
     this.game.audio.playExplosion(0.9);
-    this.effects.push(new Explosion(this.player.x, this.player.y, "#9fd6ff", 160));
+    const flashColor = playerIndex === 0 ? "#9fd6ff" : "#7fb0ff";
+    this.effects.push(new Explosion(player.x, player.y, flashColor, 160));
     for (const enemy of this.enemies) {
       this.effects.push(new Explosion(enemy.x, enemy.y, "#ffa26f", 80));
       this.score += enemy.scoreValue;
@@ -379,7 +428,7 @@ export class GameplayScene {
 
   spawnStageTwoWave() {
     const width = this.game.width;
-    const pattern = randChoice(["sweep", "spiral", "pincer"]);
+    const pattern = randChoice(["sweep", "spiral", "pincer", "striker"]);
     if (pattern === "sweep") {
       const count = 7;
       for (let i = 0; i < count; i += 1) {
@@ -410,6 +459,25 @@ export class GameplayScene {
           }),
         );
       }
+    } else if (pattern === "striker") {
+      const lanes = 3;
+      for (let i = 0; i < lanes; i += 1) {
+        const direction = i % 2 === 0 ? -1 : 1;
+        this.enemies.push(
+          this.createEnemy({
+            variant: "strafe",
+            x: direction === -1 ? this.game.width - 80 : 80,
+            y: -i * 80 - 100,
+            speedY: 150,
+            horizontalSpeed: 220,
+            horizontalDirection: direction,
+            fireCooldown: 1.1,
+            burst: 3,
+            scoreValue: 220,
+            dropType: i === 1 ? "speed" : null,
+          }),
+        );
+      }
     } else {
       const left = this.createEnemy({
         x: width * 0.28,
@@ -437,7 +505,7 @@ export class GameplayScene {
 
   spawnStageThreeWave() {
     const width = this.game.width;
-    const pattern = randChoice(["blade", "barrage", "spear"]);
+    const pattern = randChoice(["blade", "barrage", "spear", "bombing"]);
     if (pattern === "blade") {
       for (let i = 0; i < 9; i += 1) {
         this.enemies.push(
@@ -468,6 +536,24 @@ export class GameplayScene {
           }),
         );
       }
+    } else if (pattern === "bombing") {
+      const count = 5;
+      for (let i = 0; i < count; i += 1) {
+        this.enemies.push(
+          this.createEnemy({
+            variant: "bomber",
+            x: ((i + 0.5) / count) * width,
+            y: -i * 90 - 140,
+            speedY: 130,
+            fireCooldown: 1.7,
+            wobbleAmplitude: 50,
+            wobbleFrequency: 1.1,
+            health: 5,
+            scoreValue: 260,
+            dropType: i === 2 ? "bomb" : null,
+          }),
+        );
+      }
     } else {
       const spearCount = 3;
       for (let i = 0; i < spearCount; i += 1) {
@@ -492,20 +578,29 @@ export class GameplayScene {
     const baseHealth = config.health ?? 3;
     const baseBurst = config.burst ?? 1;
     const baseCooldown = config.fireCooldown ?? 1.6;
+    const variant = config.variant;
     const health = Math.max(1, Math.round(baseHealth * this.difficulty.enemyHealthMultiplier));
     const burst = Math.max(1, Math.round(baseBurst + this.difficulty.enemyExtraProjectiles));
     const fireCooldown = baseCooldown / this.difficulty.enemyFireRateMultiplier;
-    const enemy = new Enemy({
+    const { variant: _ignoredVariant, ...enemyConfig } = config;
+    const sharedConfig = {
       bounds: this.game,
-      ...config,
+      ...enemyConfig,
       health,
       burst,
       fireCooldown,
-    });
-    return enemy;
+    };
+    switch (variant) {
+      case "strafe":
+        return new StrafeEnemy(sharedConfig);
+      case "bomber":
+        return new BomberEnemy(sharedConfig);
+      default:
+        return new Enemy(sharedConfig);
+    }
   }
 
-  handleCollisions() {
+  handleCollisions(activePlayers) {
     for (let i = this.playerBullets.length - 1; i >= 0; i -= 1) {
       const bullet = this.playerBullets[i];
       let hit = false;
@@ -552,54 +647,79 @@ export class GameplayScene {
       }
     }
 
-    if (!this.player.isInvulnerable) {
-      for (let i = this.enemyBullets.length - 1; i >= 0; i -= 1) {
-        const bullet = this.enemyBullets[i];
-        const distanceSq = distanceSquared(bullet.x, bullet.y, this.player.x, this.player.y);
-        const radii = bullet.radius + this.player.radius * 0.8;
+    if (activePlayers.length === 0) {
+      return;
+    }
+
+    for (let i = this.enemyBullets.length - 1; i >= 0; i -= 1) {
+      const bullet = this.enemyBullets[i];
+      let hit = false;
+      for (const { index, player } of activePlayers) {
+        if (player.isInvulnerable || player.isEliminated) continue;
+        const distanceSq = distanceSquared(bullet.x, bullet.y, player.x, player.y);
+        const radii = bullet.radius + player.radius * 0.8;
         if (distanceSq <= radii * radii) {
           this.enemyBullets.splice(i, 1);
-          this.registerPlayerHit(bullet.damage ?? 1);
+          this.registerPlayerHit(index, bullet.damage ?? 1);
+          hit = true;
           break;
         }
       }
+      if (hit) continue;
+    }
 
-      for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
-        const enemy = this.enemies[i];
-        const distanceSq = distanceSquared(enemy.x, enemy.y, this.player.x, this.player.y);
-        if (distanceSq <= COLLISION_RADIUS * COLLISION_RADIUS) {
+    for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
+      const enemy = this.enemies[i];
+      let collided = false;
+      for (const { index, player } of activePlayers) {
+        if (player.isInvulnerable || player.isEliminated) continue;
+        const distanceSq = distanceSquared(enemy.x, enemy.y, player.x, player.y);
+        if (distanceSq <= PLAYER_COLLISION_RADIUS * PLAYER_COLLISION_RADIUS) {
           this.effects.push(new Explosion(enemy.x, enemy.y, "#ffa26f", 48));
           this.enemies.splice(i, 1);
           this.score += enemy.scoreValue;
           this.game.audio.playExplosion(0.6);
-          this.registerPlayerHit();
+          this.registerPlayerHit(index);
+          collided = true;
           break;
         }
       }
+      if (collided) {
+        continue;
+      }
+    }
 
-      if (this.boss) {
-        const distSq = distanceSquared(this.player.x, this.player.y, this.boss.x, this.boss.y);
-        if (distSq <= (this.boss.radius * 0.75 + this.player.radius) ** 2) {
-          this.registerPlayerHit(2);
+    if (this.boss) {
+      for (const { index, player } of activePlayers) {
+        if (player.isInvulnerable || player.isEliminated) continue;
+        const distSq = distanceSquared(player.x, player.y, this.boss.x, this.boss.y);
+        if (distSq <= (this.boss.radius * 0.75 + player.radius) ** 2) {
+          this.registerPlayerHit(index, 2);
         }
       }
     }
   }
 
-  registerPlayerHit(damage = 1) {
-    if (this.player.isInvulnerable) return;
-    this.player.takeHit(damage);
+  registerPlayerHit(playerIndex, damage = 1) {
+    const player = this.players[playerIndex];
+    if (!player || player.isInvulnerable || player.isEliminated) return;
+    player.takeHit(damage);
     this.game.audio.playHit();
-    this.effects.push(new Explosion(this.player.x, this.player.y, "#8ef0ff", 60));
-    if (this.player.health <= 0) {
-      this.playerLives -= 1;
-      if (this.playerLives <= 0) {
-        this.game.setScene(new DebriefScene(this.game, { score: this.score }));
+    this.effects.push(new Explosion(player.x, player.y, playerIndex === 0 ? "#8ef0ff" : "#7fb0ff", 60));
+    if (player.health <= 0) {
+      this.playerLives[playerIndex] -= 1;
+      if (this.playerLives[playerIndex] <= 0) {
+        player.eliminate();
+        this.activePlayerCount = Math.max(0, this.activePlayerCount - 1);
+        if (this.activePlayerCount <= 0) {
+          this.game.setScene(new DebriefScene(this.game, { score: this.score }));
+        }
         return;
       }
-      this.player.reset();
-      this.player.invulnerableTimer = 2;
-      this.playerBombs = this.player.bombCapacity;
+      player.reset();
+      player.invulnerableTimer = 2;
+      this.playerBombs[playerIndex] = player.bombCapacity;
+      this.bombTimers[playerIndex] = 0;
     }
   }
 
@@ -616,7 +736,9 @@ export class GameplayScene {
     }
 
     renderBullets(ctx, this.playerBullets);
-    this.player.render(ctx);
+    for (const player of this.players) {
+      player.render(ctx);
+    }
 
     for (const powerUp of this.powerUps) {
       powerUp.render(ctx);
@@ -627,12 +749,27 @@ export class GameplayScene {
     }
 
     this.renderHud(ctx);
+
+    if (this.paused) {
+      ctx.save();
+      ctx.fillStyle = "rgba(5, 8, 16, 0.6)";
+      ctx.fillRect(0, 0, this.game.width, this.game.height);
+      ctx.fillStyle = "#f8fbff";
+      ctx.font = `700 ${Math.max(42, this.game.width * 0.06)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("PAUSED", this.game.width / 2, this.game.height / 2);
+      ctx.font = `400 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.fillText("Press P to resume", this.game.width / 2, this.game.height / 2 + 42);
+      ctx.restore();
+    }
   }
 
   renderHud(ctx) {
     ctx.save();
+    const hudHeight = 156;
     ctx.fillStyle = "rgba(5, 8, 16, 0.62)";
-    ctx.fillRect(12, 12, this.game.width - 24, 78);
+    ctx.fillRect(12, 12, this.game.width - 24, hudHeight);
 
     ctx.fillStyle = "#f8fbff";
     ctx.font = `600 ${Math.max(22, this.game.width * 0.035)}px 'Inter', 'Segoe UI', sans-serif`;
@@ -644,9 +781,7 @@ export class GameplayScene {
     ctx.fillText(`Stage: ${STAGES[this.stageIndex].name} (${this.difficulty.label})`, 24, 78);
 
     this.renderMetadata(ctx);
-    this.renderLives(ctx);
-    this.renderHealth(ctx);
-    this.renderBombs(ctx);
+    this.renderPlayerPanels(ctx, 24, 96, this.game.width - 48);
     this.renderAudioHint(ctx);
 
     if (this.boss) {
@@ -676,72 +811,67 @@ export class GameplayScene {
     ctx.restore();
   }
 
-  renderLives(ctx) {
-    const iconSize = 18;
-    ctx.save();
-    const baseX = Math.max(120, this.game.width - 300);
-    ctx.translate(baseX, 32);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-    ctx.font = `500 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Lives", 0, 0);
-    for (let i = 0; i < this.playerLives; i += 1) {
-      ctx.save();
-      ctx.translate(i * (iconSize + 16), 16);
-      ctx.scale(iconSize / 16.5, iconSize / 16.5);
-      ctx.fillStyle = "#d51928";
-      ctx.beginPath();
-      ctx.moveTo(0, -18);
-      ctx.lineTo(12, 16);
-      ctx.lineTo(0, 12);
-      ctx.lineTo(-12, 16);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+  renderPlayerPanels(ctx, startX, y, width) {
+    const panelHeight = 58;
+    const panelWidth = Math.min(240, width / PLAYER_COUNT - 16);
+    const spacing = PLAYER_COUNT > 1 ? (width - panelWidth * PLAYER_COUNT) / (PLAYER_COUNT - 1) : 0;
+    for (let i = 0; i < PLAYER_COUNT; i += 1) {
+      const x = startX + i * (panelWidth + spacing);
+      this.renderPlayerPanel(ctx, i, x, y, panelWidth, panelHeight);
     }
-    ctx.restore();
   }
 
-  renderHealth(ctx) {
-    const barWidth = 180;
-    const barHeight = 14;
+  renderPlayerPanel(ctx, index, x, y, width, height) {
+    const player = this.players[index];
+    const lives = this.playerLives[index];
     ctx.save();
-    const baseX = Math.max(120, this.game.width - 300);
-    ctx.translate(baseX, 74);
+    ctx.translate(x, y);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.fillRect(0, 0, width, height);
+
     ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-    ctx.font = `500 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Hull", 0, 0);
-    ctx.translate(0, 16);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
-    ctx.fillRect(0, 0, barWidth, barHeight);
-    const segmentWidth = barWidth / HEALTH_PER_LIFE;
+    ctx.font = `600 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.textAlign = "left";
+    ctx.fillText(`P${index + 1}`, 10, 18);
+    ctx.font = `400 ${Math.max(12, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
+    const controlText = index === 0 ? "WASD • Bomb V" : "Arrow Keys • Bomb M";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+    ctx.fillText(controlText, 10, 34);
+
+    if (player.isEliminated || lives <= 0) {
+      ctx.fillStyle = "rgba(255, 120, 120, 0.75)";
+      ctx.font = `600 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.textAlign = "right";
+      ctx.fillText("DOWN", width - 10, 20);
+    } else {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+      ctx.font = `500 ${Math.max(14, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.textAlign = "right";
+      ctx.fillText(`Lives ${lives}`, width - 10, 18);
+    }
+
+    ctx.textAlign = "left";
+    ctx.translate(0, height - 20);
+    const barWidth = width - 80;
+    const barHeight = 10;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.fillRect(10, 0, barWidth, barHeight);
+    const health = player.isEliminated ? 0 : player.health;
+    const segmentWidth = (barWidth - (HEALTH_PER_LIFE - 1) * 2) / HEALTH_PER_LIFE;
     for (let i = 0; i < HEALTH_PER_LIFE; i += 1) {
-      ctx.fillStyle = i < this.player.health ? "#ff5f5f" : "rgba(255, 255, 255, 0.25)";
-      ctx.fillRect(i * segmentWidth + 1, 2, segmentWidth - 2, barHeight - 4);
+      ctx.fillStyle = i < health ? "#ff5f5f" : "rgba(255, 255, 255, 0.25)";
+      ctx.fillRect(10 + i * (segmentWidth + 2), 0, segmentWidth, barHeight);
     }
-    ctx.restore();
-  }
 
-  renderBombs(ctx) {
-    ctx.save();
-    ctx.translate(24, this.game.height - 32);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
-    ctx.font = `500 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Bombs", 0, 0);
-    ctx.translate(0, 6);
-    for (let i = 0; i < this.player.bombCapacity; i += 1) {
-      ctx.save();
-      ctx.translate(i * 36, 12);
-      ctx.fillStyle = i < this.playerBombs ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
+    const bombBaseX = 10 + barWidth + 12;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+    for (let i = 0; i < player.bombCapacity; i += 1) {
       ctx.beginPath();
-      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.arc(bombBaseX + i * 16, barHeight / 2, 6, 0, Math.PI * 2);
+      ctx.fillStyle = i < this.playerBombs[index] ? "#ffcf5a" : "rgba(255, 255, 255, 0.25)";
       ctx.fill();
-      ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
-      ctx.font = `700 ${10}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("B", 0, 0);
-      ctx.restore();
     }
+
     ctx.restore();
   }
 
@@ -750,7 +880,7 @@ export class GameplayScene {
     const width = this.game.width - 120;
     const height = 16;
     const x = 60;
-    const y = 108;
+    const y = 12 + 156 + 12;
     ctx.fillStyle = "rgba(5, 8, 16, 0.72)";
     ctx.fillRect(x, y, width, height + 24);
     ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
@@ -773,7 +903,11 @@ export class GameplayScene {
     ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
     ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "right";
-    ctx.fillText(`BGM: ${enabled ? "ON" : "OFF"} (M)`, this.game.width - 24, this.game.height - 24);
+    ctx.fillText(
+      `BGM: ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R)`,
+      this.game.width - 24,
+      this.game.height - 24,
+    );
     ctx.restore();
   }
 
@@ -800,6 +934,30 @@ export class GameplayScene {
     ctx.font = `500 ${Math.max(18, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillText(this.levelBannerSubtitle, this.game.width / 2, this.game.height * 0.32 + 28);
     ctx.restore();
+  }
+
+  getActivePlayers() {
+    const active = [];
+    for (let i = 0; i < PLAYER_COUNT; i += 1) {
+      if (this.playerLives[i] > 0 && !this.players[i].isEliminated) {
+        active.push({ index: i, player: this.players[i] });
+      }
+    }
+    return active;
+  }
+
+  layoutPlayers() {
+    const baselineY = this.game.height - 96;
+    const spacing = this.game.width / (PLAYER_COUNT + 1);
+    for (let i = 0; i < PLAYER_COUNT; i += 1) {
+      const player = this.players[i];
+      const spawnX = spacing * (i + 1);
+      player.setSpawnPosition(spawnX, baselineY);
+    }
+  }
+
+  restartScene() {
+    this.game.setScene(new GameplayScene(this.game, this.difficulty));
   }
 }
 

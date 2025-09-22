@@ -140,3 +140,75 @@ export class Enemy {
     ctx.restore();
   }
 }
+
+export class StrafeEnemy extends Enemy {
+  constructor(config) {
+    super(config);
+    this.horizontalSpeed = config.horizontalSpeed ?? 180;
+    this.direction = config.horizontalDirection ?? (Math.random() < 0.5 ? -1 : 1);
+  }
+
+  update(dt) {
+    this.age += dt;
+    this.y += this.speedY * dt;
+    this.x = clamp(
+      this.x + this.direction * this.horizontalSpeed * dt,
+      this.radius,
+      this.bounds.width - this.radius,
+    );
+    if (this.x <= this.radius || this.x >= this.bounds.width - this.radius) {
+      this.direction *= -1;
+    }
+    this.fireTimer -= dt;
+    if (this.fireTimer <= 0) {
+      this.fireTimer = this.fireCooldown;
+      const spread = Math.max(2, this.burst);
+      const volley = [];
+      for (let i = 0; i < spread; i += 1) {
+        const factor = spread === 1 ? 0 : i / (spread - 1) - 0.5;
+        const angle = factor * 0.35;
+        volley.push({
+          x: this.x,
+          y: this.y + this.radius,
+          velocityX: Math.sin(angle) * 240,
+          velocityY: 220 + Math.abs(factor) * 60,
+          radius: 5,
+          friendly: false,
+          damage: 1,
+        });
+      }
+      return volley;
+    }
+    return null;
+  }
+}
+
+export class BomberEnemy extends Enemy {
+  constructor(config) {
+    super(config);
+    this.dropTimer = randRange(0.5, this.fireCooldown ?? 1.2);
+    this.wobbleFrequency = config.wobbleFrequency ?? 1.2;
+    this.wobbleAmplitude = config.wobbleAmplitude ?? 40;
+  }
+
+  update(dt) {
+    this.age += dt;
+    this.y += this.speedY * dt;
+    const wobbleOffset = Math.sin(this.age * this.wobbleFrequency) * this.wobbleAmplitude * dt;
+    this.x = clamp(this.x + wobbleOffset, this.radius, this.bounds.width - this.radius);
+    this.dropTimer -= dt;
+    if (this.dropTimer <= 0) {
+      this.dropTimer = this.fireCooldown;
+      return {
+        x: this.x,
+        y: this.y + this.radius,
+        velocityX: 0,
+        velocityY: 240,
+        radius: 8,
+        friendly: false,
+        damage: 2,
+      };
+    }
+    return null;
+  }
+}
