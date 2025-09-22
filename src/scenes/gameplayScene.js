@@ -1,4 +1,5 @@
 import { Explosion } from "../effects/explosion.js";
+import { BombWave } from "../effects/bombWave.js";
 import { Starfield } from "../effects/starfield.js";
 import { updateBullets, renderBullets } from "../entities/bullet.js";
 import { Enemy, StrafeEnemy, BomberEnemy } from "../entities/enemy.js";
@@ -59,6 +60,7 @@ const PLAYER_MAX_LIVES = 3;
 const PLAYER_COLLISION_RADIUS = 19;
 const HEALTH_PER_LIFE = 3;
 const BOMB_DAMAGE = 18;
+const BOMB_BLAST_RADIUS = 240;
 const BOMB_COOLDOWN = 0.8;
 const MAX_PLAYER_COUNT = 2;
 const LEVEL_BANNER_DURATION = 2;
@@ -313,22 +315,48 @@ export class GameplayScene {
     this.bombFlashTimer = 0.6;
     this.game.audio.playBomb();
     this.game.audio.playExplosion(0.9);
-    const flashColor = playerIndex === 0 ? "#9fd6ff" : "#7fb0ff";
-    this.effects.push(new Explosion(player.x, player.y, flashColor, 160));
+    const haloColor = playerIndex === 0 ? "#9fd6ff" : "#7fb0ff";
+    this.effects.push(new BombWave(player.x, player.y, BOMB_BLAST_RADIUS, haloColor));
+    this.effects.push(new Explosion(player.x, player.y, haloColor, 120));
+
+    let scoreGain = 0;
+    const survivors = [];
     for (const enemy of this.enemies) {
-      this.effects.push(new Explosion(enemy.x, enemy.y, "#ffa26f", 80));
-      this.score += enemy.scoreValue;
+      const effectiveRadius = BOMB_BLAST_RADIUS + enemy.radius;
+      const inBlast = distanceSquared(player.x, player.y, enemy.x, enemy.y) <= effectiveRadius * effectiveRadius;
+      if (inBlast) {
+        this.effects.push(new Explosion(enemy.x, enemy.y, "#ffa26f", 80));
+        scoreGain += enemy.scoreValue;
+      } else {
+        survivors.push(enemy);
+      }
     }
-    this.enemies = [];
-    this.enemyBullets = [];
+    this.score += scoreGain;
+    this.enemies = survivors;
+
+    const filteredBullets = [];
+    for (const bullet of this.enemyBullets) {
+      const bulletRadius = (bullet?.radius ?? 0) + 6;
+      const effectiveRadius = BOMB_BLAST_RADIUS + bulletRadius;
+      const hit = distanceSquared(player.x, player.y, bullet.x, bullet.y) <= effectiveRadius * effectiveRadius;
+      if (!hit) {
+        filteredBullets.push(bullet);
+      }
+    }
+    this.enemyBullets = filteredBullets;
+
     if (this.boss) {
-      const defeated = this.boss.takeHit(BOMB_DAMAGE);
-      if (defeated) {
-        this.score += 4000;
-        this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", 140));
-        this.dropBossRewards();
-        this.boss = null;
-        this.advanceStage();
+      const effectiveRadius = BOMB_BLAST_RADIUS + (this.boss.radius ?? 0);
+      const hitBoss = distanceSquared(player.x, player.y, this.boss.x, this.boss.y) <= effectiveRadius * effectiveRadius;
+      if (hitBoss) {
+        const defeated = this.boss.takeHit(BOMB_DAMAGE);
+        this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", defeated ? 140 : 100));
+        if (defeated) {
+          this.score += 4000;
+          this.dropBossRewards();
+          this.boss = null;
+          this.advanceStage();
+        }
       }
     }
   }
@@ -795,17 +823,12 @@ export class GameplayScene {
     ctx.save();
     const topMargin = 12;
     const scoreRect = this.renderScorePanel(ctx, topMargin);
-    const metadataInfo = { author: "Cliff Wang", version: "v1.0 • 2024-05-01" };
-    const { bottom: playerBottom, renderedMetadata } = this.renderPlayerPanels(ctx, topMargin, metadataInfo);
-    const metadataRect = renderedMetadata
-      ? this.players[1]
-        ? { top: topMargin, bottom: topMargin + 6 }
-        : { top: topMargin, bottom: Math.max(topMargin, playerBottom) }
-      : this.renderMetadata(ctx, topMargin);
+    const playerBottom = this.renderPlayerPanels(ctx, topMargin);
+    this.renderAuthorFooter(ctx);
     this.renderAudioHint(ctx);
 
     if (this.boss) {
-      const hudFloor = Math.max(scoreRect.bottom, metadataRect.bottom, playerBottom);
+      const hudFloor = Math.max(scoreRect.bottom, playerBottom);
       const bossTop = Math.max(hudFloor + 20, topMargin + 120);
       this.renderBossHealth(ctx, bossTop);
     } else if (this.bossWarningTimer > 0) {
@@ -865,14 +888,13 @@ export class GameplayScene {
     return { top: y, bottom: y + height };
   }
 
-  renderPlayerPanels(ctx, topY = 16, metadataInfo = null) {
+  renderPlayerPanels(ctx, topY = 16) {
     if (this.players.length === 0) {
-      return { bottom: topY, renderedMetadata: false };
+      return topY;
     }
     const width = Math.min(220, this.game.width * 0.32);
     const height = Math.max(58, this.game.height * 0.085);
     let bottom = topY;
-    let renderedMetadata = false;
 
     if (this.players[0]) {
       this.renderPlayerBadge(ctx, 0, 16, topY, width, height);
@@ -881,26 +903,21 @@ export class GameplayScene {
 
     if (this.players[1]) {
       const rightX = this.game.width - width - 16;
-      this.renderPlayerBadge(ctx, 1, rightX, topY, width, height, metadataInfo);
+      this.renderPlayerBadge(ctx, 1, rightX, topY, width, height);
       bottom = Math.max(bottom, topY + height);
-      renderedMetadata = true;
-    } else if (metadataInfo) {
-      const rect = this.renderMetadata(ctx, topY);
-      bottom = Math.max(bottom, rect.bottom);
-      renderedMetadata = true;
     }
 
-    return { bottom, renderedMetadata };
+    return bottom;
   }
 
-  renderPlayerBadge(ctx, index, x, y, width, height, metadataInfo) {
+  renderPlayerBadge(ctx, index, x, y, width, height) {
     const player = this.players[index];
     if (!player) return;
     const lives = this.playerLives[index] ?? 0;
     const bombs = this.playerBombs[index] ?? 0;
     const capacity = player.bombCapacity ?? 0;
     const health = player.isEliminated ? 0 : player.health;
-    const accent = index === 0 ? "#ff6d8f" : "#7faeff";
+    const accent = player.palette?.accent ?? (index === 0 ? "#ff6d8f" : "#7faeff");
 
     ctx.save();
     ctx.translate(x, y);
@@ -921,21 +938,9 @@ export class GameplayScene {
     ctx.textAlign = "left";
     ctx.fillText(`P${index + 1}`, 12, 16);
 
-    if (metadataInfo && index === 1) {
-      ctx.save();
-      ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
-      ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(metadataInfo.author, width - 12, 16);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-      ctx.font = `400 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(metadataInfo.version, width - 12, 30);
-      ctx.restore();
-    }
-
     const lifeIconSpacing = 22;
     const iconStart = 44;
-    const lifeIconY = metadataInfo && index === 1 ? 34 : 18;
+    const lifeIconY = 18;
     for (let i = 0; i < PLAYER_MAX_LIVES; i += 1) {
       const filled = i < lives;
       const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
@@ -954,7 +959,7 @@ export class GameplayScene {
     ctx.restore();
 
     const barX = 12;
-    const barY = metadataInfo && index === 1 ? 44 : 30;
+    const barY = 30;
     const barWidth = width - 24;
     const segmentSpacing = 4;
     const segmentWidth = (barWidth - (HEALTH_PER_LIFE - 1) * segmentSpacing) / HEALTH_PER_LIFE;
@@ -1026,6 +1031,19 @@ export class GameplayScene {
     ctx.restore();
   }
 
+  renderAuthorFooter(ctx) {
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+    ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+    const baseY = this.game.height - 44;
+    ctx.fillText("Cliff Wang", 20, baseY);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.56)";
+    ctx.font = `500 ${Math.max(10, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("v1.0 • 2024-05-01", 20, baseY + 20);
+    ctx.restore();
+  }
+
   renderAudioHint(ctx) {
     ctx.save();
     const enabled = this.game.audio.enabled;
@@ -1035,31 +1053,9 @@ export class GameplayScene {
     ctx.fillText(
       `BGM ${enabled ? "ON" : "OFF"} (N) • Pause (P) • Restart (R) • Title (Esc)`,
       this.game.width - 20,
-      this.game.height - 20,
+      this.game.height - 24,
     );
     ctx.restore();
-  }
-
-  renderMetadata(ctx, y = 16) {
-    ctx.save();
-    const width = Math.min(188, this.game.width * 0.28);
-    const height = Math.max(46, this.game.height * 0.07);
-    const x = this.game.width - width - 16;
-    ctx.fillStyle = "rgba(8, 12, 22, 0.7)";
-    drawRoundedRect(ctx, x, y, width, height, 16);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
-    ctx.font = `600 ${Math.max(13, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Cliff Wang", x + width / 2, y + 18);
-    ctx.font = `400 ${Math.max(10, this.game.width * 0.017)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.fillText("v1.0 • 2024-05-01", x + width / 2, y + height - 14);
-    ctx.restore();
-    return { top: y, bottom: y + height };
   }
 
   renderLevelBanner(ctx) {
@@ -1119,42 +1115,56 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 function drawMiniFighter(ctx, x, y, color) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(0.95, 0.95);
+  ctx.scale(0.92, 0.92);
 
+  const fuselage = ctx.createLinearGradient(0, -12, 0, 12);
+  fuselage.addColorStop(0, "rgba(255, 255, 255, 0.75)");
+  fuselage.addColorStop(0.45, color);
+  fuselage.addColorStop(1, "rgba(0, 0, 0, 0.2)");
+  ctx.fillStyle = fuselage;
   ctx.beginPath();
-  ctx.moveTo(0, -11);
-  ctx.lineTo(6.2, -2.4);
-  ctx.lineTo(3.4, -2.4);
-  ctx.lineTo(9, 6.8);
-  ctx.lineTo(1.8, 4.6);
-  ctx.lineTo(0, 10.5);
-  ctx.lineTo(-1.8, 4.6);
-  ctx.lineTo(-9, 6.8);
-  ctx.lineTo(-3.4, -2.4);
-  ctx.lineTo(-6.2, -2.4);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-
-  ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
-  ctx.beginPath();
-  ctx.moveTo(0, -5);
-  ctx.lineTo(2.6, 3.6);
-  ctx.lineTo(0, 8.6);
-  ctx.lineTo(-2.6, 3.6);
+  ctx.moveTo(0, -12);
+  ctx.lineTo(3.6, -6);
+  ctx.lineTo(3, 4);
+  ctx.lineTo(1.6, 9.5);
+  ctx.lineTo(0, 12);
+  ctx.lineTo(-1.6, 9.5);
+  ctx.lineTo(-3, 4);
+  ctx.lineTo(-3.6, -6);
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
   ctx.beginPath();
-  ctx.ellipse(0, -2.6, 2.8, 3.4, 0, 0, Math.PI * 2);
+  ctx.moveTo(-7.5, -1.2);
+  ctx.lineTo(-3.6, 2.4);
+  ctx.lineTo(-4.8, 7.5);
+  ctx.lineTo(-9, 2);
+  ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+  ctx.beginPath();
+  ctx.moveTo(7.5, -1.2);
+  ctx.lineTo(3.6, 2.4);
+  ctx.lineTo(4.8, 7.5);
+  ctx.lineTo(9, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+  ctx.beginPath();
+  ctx.moveTo(0, -7);
+  ctx.lineTo(1.6, -1);
+  ctx.lineTo(0, 6);
+  ctx.lineTo(-1.6, -1);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
   ctx.lineWidth = 0.9;
   ctx.beginPath();
   ctx.moveTo(0, -11);
-  ctx.lineTo(0, 9.6);
+  ctx.lineTo(0, 10.4);
   ctx.stroke();
 
   ctx.restore();

@@ -8,9 +8,9 @@ const FUSELAGE_COLORS = [
 ];
 
 const CARRIER_COLORS = [
-  { hull: "#1c1410", trim: "#5a3c24", glow: "#ffb36b" },
-  { hull: "#1a120f", trim: "#6a4b32", glow: "#ff9f57" },
-  { hull: "#120d0b", trim: "#3d2b24", glow: "#f9c27a" },
+  { hull: "#0f0907", trim: "#3a2a1f", glow: "#d8a15c" },
+  { hull: "#140c08", trim: "#4a3326", glow: "#f0b972" },
+  { hull: "#120b07", trim: "#2f231a", glow: "#c98a4a" },
 ];
 
 export class Enemy {
@@ -26,6 +26,7 @@ export class Enemy {
     this.burst = config.burst ?? 1;
     this.burstSpread = config.burstSpread ?? 0.2;
     this.fireTimer = randRange(0.2, this.fireCooldown);
+    this.dropType = config.dropType ?? null;
     if (config.color) {
       this.color = config.color;
     } else if (this.dropType) {
@@ -36,7 +37,6 @@ export class Enemy {
     this.age = 0;
     this.scoreValue = config.scoreValue ?? 150;
     this.bounds = config.bounds;
-    this.dropType = config.dropType ?? null;
   }
 
   update(dt) {

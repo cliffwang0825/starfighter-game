@@ -283,64 +283,126 @@ export class Player {
       ctx.restore();
     }
 
-    const bodyGradient = ctx.createLinearGradient(0, -40 * scale, 0, 36 * scale);
-    bodyGradient.addColorStop(0, this.palette.top ?? "#ffffff");
-    bodyGradient.addColorStop(0.4, this.palette.mid ?? "#ffeaea");
-    bodyGradient.addColorStop(0.7, this.palette.base ?? "#d51928");
-    bodyGradient.addColorStop(1, this.palette.shadow ?? "#6c0b17");
-    ctx.fillStyle = bodyGradient;
-    ctx.beginPath();
-    ctx.moveTo(0, -42 * scale);
-    ctx.bezierCurveTo(20 * scale, -34 * scale, 26 * scale, 8 * scale, 18 * scale, 34 * scale);
-    ctx.lineTo(0, 28 * scale);
-    ctx.lineTo(-18 * scale, 34 * scale);
-    ctx.bezierCurveTo(-26 * scale, 8 * scale, -20 * scale, -34 * scale, 0, -42 * scale);
-    ctx.closePath();
-    ctx.fill();
+    const hullTop = this.palette.hullTop ?? this.palette.top ?? "#ffffff";
+    const hullMid = this.palette.hullMid ?? this.palette.mid ?? "#ffeaea";
+    const hullBottom = this.palette.hullBottom ?? this.palette.base ?? "#d51928";
+    const hullEdge = this.palette.hullEdge ?? this.palette.shadow ?? "#4e0713";
+    const wingPrimary = this.palette.wingPrimary ?? this.palette.wingBase ?? "#b60e1b";
+    const wingShadow = this.palette.wingShadow ?? "#2a030a";
+    const trim = this.palette.trim ?? "rgba(255, 255, 255, 0.75)";
+    const accent = this.palette.accent ?? "#9fd6ff";
 
-    const wingGradient = ctx.createLinearGradient(0, -12 * scale, 0, 36 * scale);
-    wingGradient.addColorStop(0, this.palette.wingHighlight ?? "#f6f6f8");
-    wingGradient.addColorStop(0.6, this.palette.wingBase ?? "#b60e1b");
-    wingGradient.addColorStop(1, this.palette.wingShadow ?? "#420208");
+    const wingGradient = ctx.createLinearGradient(0, -18 * scale, 0, 44 * scale);
+    wingGradient.addColorStop(0, `${trim}`);
+    wingGradient.addColorStop(0.45, wingPrimary);
+    wingGradient.addColorStop(1, wingShadow);
     ctx.fillStyle = wingGradient;
     ctx.beginPath();
-    ctx.moveTo(-30 * scale, -4 * scale);
-    ctx.lineTo(-8 * scale, 14 * scale);
-    ctx.lineTo(-18 * scale, 36 * scale);
-    ctx.lineTo(-42 * scale, 18 * scale);
+    ctx.moveTo(-38 * scale, -8 * scale);
+    ctx.lineTo(-16 * scale, 6 * scale);
+    ctx.lineTo(-20 * scale, 34 * scale);
+    ctx.quadraticCurveTo(-42 * scale, 22 * scale, -46 * scale, 4 * scale);
     ctx.closePath();
     ctx.fill();
 
     ctx.beginPath();
-    ctx.moveTo(30 * scale, -4 * scale);
-    ctx.lineTo(8 * scale, 14 * scale);
-    ctx.lineTo(18 * scale, 36 * scale);
-    ctx.lineTo(42 * scale, 18 * scale);
+    ctx.moveTo(38 * scale, -8 * scale);
+    ctx.lineTo(16 * scale, 6 * scale);
+    ctx.lineTo(20 * scale, 34 * scale);
+    ctx.quadraticCurveTo(42 * scale, 22 * scale, 46 * scale, 4 * scale);
     ctx.closePath();
     ctx.fill();
 
-    const canopy = ctx.createLinearGradient(0, -12 * scale, 0, 10 * scale);
-    canopy.addColorStop(0, this.palette.canopyHighlight ?? "rgba(180, 220, 255, 0.95)");
-    canopy.addColorStop(0.5, this.palette.canopyMid ?? "rgba(70, 140, 220, 0.85)");
-    canopy.addColorStop(1, this.palette.canopyShadow ?? "rgba(20, 40, 80, 0.9)");
+    const hullGradient = ctx.createLinearGradient(0, -44 * scale, 0, 42 * scale);
+    hullGradient.addColorStop(0, hullTop);
+    hullGradient.addColorStop(0.45, hullMid);
+    hullGradient.addColorStop(0.8, hullBottom);
+    hullGradient.addColorStop(1, hullEdge);
+    ctx.fillStyle = hullGradient;
+    ctx.beginPath();
+    ctx.moveTo(0, -44 * scale);
+    ctx.lineTo(11 * scale, -32 * scale);
+    ctx.quadraticCurveTo(18 * scale, -12 * scale, 14 * scale, 18 * scale);
+    ctx.lineTo(9 * scale, 46 * scale);
+    ctx.quadraticCurveTo(0, 54 * scale, -9 * scale, 46 * scale);
+    ctx.lineTo(-14 * scale, 18 * scale);
+    ctx.quadraticCurveTo(-18 * scale, -12 * scale, -11 * scale, -32 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3 * scale;
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(0, -38 * scale);
+    ctx.lineTo(0, 34 * scale);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = trim;
+    ctx.beginPath();
+    ctx.moveTo(-12 * scale, -22 * scale);
+    ctx.lineTo(-6 * scale, -4 * scale);
+    ctx.lineTo(-10 * scale, 14 * scale);
+    ctx.lineTo(-18 * scale, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(12 * scale, -22 * scale);
+    ctx.lineTo(6 * scale, -4 * scale);
+    ctx.lineTo(10 * scale, 14 * scale);
+    ctx.lineTo(18 * scale, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    const canopy = ctx.createLinearGradient(0, -16 * scale, 0, 8 * scale);
+    canopy.addColorStop(0, this.palette.canopyHighlight ?? "rgba(210, 240, 255, 0.95)");
+    canopy.addColorStop(0.5, this.palette.canopyMid ?? "rgba(90, 160, 255, 0.85)");
+    canopy.addColorStop(1, this.palette.canopyShadow ?? "rgba(20, 40, 80, 0.92)");
     ctx.fillStyle = canopy;
     ctx.beginPath();
-    ctx.ellipse(0, -4 * scale, 16 * scale, 18 * scale, 0, 0, Math.PI * 2);
+    ctx.moveTo(0, -24 * scale);
+    ctx.quadraticCurveTo(10 * scale, -14 * scale, 8 * scale, -2 * scale);
+    ctx.quadraticCurveTo(0, 10 * scale, -8 * scale, -2 * scale);
+    ctx.quadraticCurveTo(-10 * scale, -14 * scale, 0, -24 * scale);
+    ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
     ctx.beginPath();
-    ctx.ellipse(-4 * scale, -8 * scale, 6 * scale, 8 * scale, Math.PI / 4, 0, Math.PI * 2);
+    ctx.ellipse(-4 * scale, -10 * scale, 5 * scale, 7 * scale, -Math.PI / 6, 0, Math.PI * 2);
     ctx.fill();
 
-    const engineGlow = ctx.createRadialGradient(0, 32 * scale, 2 * scale, 0, 32 * scale, 18 * scale);
-    engineGlow.addColorStop(0, this.palette.engineCore ?? "rgba(255, 180, 120, 0.9)");
-    engineGlow.addColorStop(0.6, this.palette.engineMid ?? "rgba(255, 120, 40, 0.35)");
-    engineGlow.addColorStop(1, this.palette.engineEdge ?? "rgba(255, 80, 0, 0)");
-    ctx.fillStyle = engineGlow;
+    const engineGlowLeft = ctx.createRadialGradient(-6 * scale, 38 * scale, 2 * scale, -6 * scale, 38 * scale, 16 * scale);
+    engineGlowLeft.addColorStop(0, this.palette.engineCore ?? "rgba(255, 180, 120, 0.9)");
+    engineGlowLeft.addColorStop(0.6, this.palette.engineMid ?? "rgba(255, 120, 40, 0.35)");
+    engineGlowLeft.addColorStop(1, this.palette.engineEdge ?? "rgba(255, 80, 0, 0)");
+    const engineGlowRight = ctx.createRadialGradient(6 * scale, 38 * scale, 2 * scale, 6 * scale, 38 * scale, 16 * scale);
+    engineGlowRight.addColorStop(0, this.palette.engineCore ?? "rgba(255, 180, 120, 0.9)");
+    engineGlowRight.addColorStop(0.6, this.palette.engineMid ?? "rgba(255, 120, 40, 0.35)");
+    engineGlowRight.addColorStop(1, this.palette.engineEdge ?? "rgba(255, 80, 0, 0)");
+
+    ctx.fillStyle = engineGlowLeft;
     ctx.beginPath();
-    ctx.ellipse(0, 32 * scale, 18 * scale, 12 * scale, 0, 0, Math.PI * 2);
+    ctx.ellipse(-6 * scale, 38 * scale, 12 * scale, 10 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.fillStyle = engineGlowRight;
+    ctx.beginPath();
+    ctx.ellipse(6 * scale, 38 * scale, 12 * scale, 10 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = `${accent}88`;
+    ctx.lineWidth = 2 * scale;
+    ctx.setLineDash([6 * scale, 4 * scale]);
+    ctx.beginPath();
+    ctx.moveTo(-20 * scale, 10 * scale);
+    ctx.lineTo(-28 * scale, 26 * scale);
+    ctx.moveTo(20 * scale, 10 * scale);
+    ctx.lineTo(28 * scale, 26 * scale);
+    ctx.stroke();
+    ctx.setLineDash([]);
 
     ctx.restore();
   }
@@ -348,35 +410,37 @@ export class Player {
   getPaletteForIndex(index) {
     if (index === 1) {
       return {
-        top: "#e4f4ff",
-        mid: "#cfd8ff",
-        base: "#2c4fd8",
-        shadow: "#081038",
-        wingHighlight: "#e2e9ff",
-        wingBase: "#1e3aa8",
-        wingShadow: "#040924",
-        canopyHighlight: "rgba(255, 200, 200, 0.95)",
-        canopyMid: "rgba(240, 120, 140, 0.85)",
-        canopyShadow: "rgba(130, 40, 60, 0.9)",
-        engineCore: "rgba(130, 220, 255, 0.9)",
-        engineMid: "rgba(80, 170, 255, 0.35)",
-        engineEdge: "rgba(30, 110, 255, 0)",
+        hullTop: "#f1f6ff",
+        hullMid: "#d3dcff",
+        hullBottom: "#2848d4",
+        hullEdge: "#050a22",
+        wingPrimary: "#1e3aa8",
+        wingShadow: "#070d1f",
+        trim: "#dfe9ff",
+        accent: "#7fb4ff",
+        canopyHighlight: "rgba(255, 222, 240, 0.95)",
+        canopyMid: "rgba(190, 140, 255, 0.82)",
+        canopyShadow: "rgba(90, 40, 120, 0.9)",
+        engineCore: "rgba(120, 220, 255, 0.9)",
+        engineMid: "rgba(60, 150, 255, 0.4)",
+        engineEdge: "rgba(30, 80, 255, 0)",
       };
     }
     return {
-      top: "#ffffff",
-      mid: "#ffeaea",
-      base: "#d51928",
-      shadow: "#6c0b17",
-      wingHighlight: "#f6f6f8",
-      wingBase: "#b60e1b",
-      wingShadow: "#420208",
-      canopyHighlight: "rgba(180, 220, 255, 0.95)",
-      canopyMid: "rgba(70, 140, 220, 0.85)",
-      canopyShadow: "rgba(20, 40, 80, 0.9)",
-      engineCore: "rgba(255, 180, 120, 0.9)",
-      engineMid: "rgba(255, 120, 40, 0.35)",
-      engineEdge: "rgba(255, 80, 0, 0)",
+      hullTop: "#fff7fb",
+      hullMid: "#ffd9df",
+      hullBottom: "#d72038",
+      hullEdge: "#470912",
+      wingPrimary: "#ff3f5f",
+      wingShadow: "#2e0812",
+      trim: "#ffeef5",
+      accent: "#9fd6ff",
+      canopyHighlight: "rgba(210, 240, 255, 0.95)",
+      canopyMid: "rgba(120, 180, 255, 0.85)",
+      canopyShadow: "rgba(24, 46, 92, 0.9)",
+      engineCore: "rgba(255, 190, 140, 0.9)",
+      engineMid: "rgba(255, 130, 50, 0.35)",
+      engineEdge: "rgba(255, 90, 10, 0)",
     };
   }
 }
