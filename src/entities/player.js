@@ -262,11 +262,18 @@ export class Player {
 
   getWeaponDisplayInfo() {
     const gaugeLevel = this.getStoredWeaponLevel();
+    let gaugeColor = "#ffd86d";
+    if (this.weaponMode === "spread") {
+      gaugeColor = "#ff8a3c";
+    } else if (this.weaponMode === "laser") {
+      gaugeColor = "#5aa8ff";
+    }
     return {
       mode: this.weaponMode,
       label: this.getWeaponLabel(),
       level: gaugeLevel,
       gaugeLevel,
+      gaugeColor,
     };
   }
 

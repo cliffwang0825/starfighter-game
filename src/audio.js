@@ -117,7 +117,7 @@ export class AudioManager {
     this.sfxGain = null;
     this.musicSource = null;
     this.musicStage = -1;
-    this.musicEnabled = true;
+    this.musicEnabled = false;
     this.sfxEnabled = true;
     this.musicVolume = 0.48;
     this.sfxVolume = 0.8;

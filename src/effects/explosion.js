@@ -1,9 +1,9 @@
 export class Explosion {
-  constructor(x, y, color = "#ffd166", radius = 26) {
+  constructor(x, y, color = "#ffd166", radius = 26, life = 0.45) {
     this.x = x;
     this.y = y;
     this.color = color;
-    this.life = 0.45;
+    this.life = life;
     this.elapsed = 0;
     this.baseRadius = radius;
   }
