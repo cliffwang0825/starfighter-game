@@ -62,9 +62,11 @@ const STAR_COLOR_CHOICES = [
   "rgba(255, 236, 210, 0.45)",
 ];
 
-const PLAYER_MAX_LIVES = 3;
+const PLAYER_STARTING_LIVES = 3;
+const PLAYER_LIFE_CAP = 5;
 const PLAYER_COLLISION_RADIUS = 19;
 const HEALTH_PER_LIFE = 3;
+const LIFE_REWARD_INTERVAL = 100000;
 const BOMB_DAMAGE = 18;
 const BOMB_BLAST_RADIUS = 480;
 const BOMB_COOLDOWN = 0.8;
@@ -128,11 +130,12 @@ export class GameplayScene {
     this.starfield = new Starfield(game, 220);
     this.starfield.setBrightness(0.5);
     this.players = Array.from({ length: this.playerCount }, (_, index) => new Player(game, { playerIndex: index }));
-    this.playerLives = Array.from({ length: this.playerCount }, () => PLAYER_MAX_LIVES);
+    this.playerLives = Array.from({ length: this.playerCount }, () => PLAYER_STARTING_LIVES);
     this.playerBombs = this.players.map((player) => player.bombCapacity);
     this.bombTimers = new Array(this.playerCount).fill(0);
     this.activePlayerCount = this.playerCount;
     this.score = 0;
+    this.nextLifeScore = LIFE_REWARD_INTERVAL;
     this.time = 0;
     this.levelNumber = 1;
     this.stageIndex = 0;
@@ -318,7 +321,7 @@ export class GameplayScene {
         const isFinalBoss = defeatedId === FINAL_BOSS_ID;
         const bossX = this.boss.x;
         const bossY = this.boss.y;
-        this.score += isFinalBoss ? 10000 : 4000;
+        this.addScore(isFinalBoss ? 10000 : 4000);
         this.game.audio.playExplosion(isFinalBoss ? 1.35 : 1.2);
         if (isFinalBoss) {
           this.spawnFinalBossExplosion(bossX, bossY);
@@ -402,6 +405,38 @@ export class GameplayScene {
     }
   }
 
+  addScore(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+    this.score = Math.max(0, Math.floor(this.score + amount));
+    while (this.score >= this.nextLifeScore) {
+      const granted = this.grantLifeReward();
+      this.nextLifeScore += LIFE_REWARD_INTERVAL;
+      if (!granted) {
+        break;
+      }
+    }
+  }
+
+  grantLifeReward() {
+    let recipient = -1;
+    let lowestLives = Infinity;
+    for (let i = 0; i < this.playerLives.length; i += 1) {
+      const lives = this.playerLives[i] ?? 0;
+      if (lives < PLAYER_LIFE_CAP && lives < lowestLives) {
+        lowestLives = lives;
+        recipient = i;
+      }
+    }
+    if (recipient === -1) {
+      return false;
+    }
+    this.playerLives[recipient] = Math.min(PLAYER_LIFE_CAP, this.playerLives[recipient] + 1);
+    this.game.audio.playPowerUp();
+    return true;
+  }
+
   activateBomb(playerIndex) {
     const player = this.players[playerIndex];
     if (!player || player.isEliminated) return;
@@ -426,7 +461,7 @@ export class GameplayScene {
         survivors.push(enemy);
       }
     }
-    this.score += scoreGain;
+    this.addScore(scoreGain);
     this.enemies = survivors;
 
     const filteredBullets = [];
@@ -459,7 +494,7 @@ export class GameplayScene {
           this.effects.push(new Explosion(bossX, bossY, "#ffffff", isFinalBoss ? 140 : 100));
         }
         if (defeated) {
-          this.score += isFinalBoss ? 10000 : 4000;
+          this.addScore(isFinalBoss ? 10000 : 4000);
           this.game.audio.playExplosion(isFinalBoss ? 1.35 : 1.1);
           if (!isFinalBoss) {
             this.dropBossRewards();
@@ -1000,7 +1035,7 @@ export class GameplayScene {
             const isFinalBoss = defeatedId === FINAL_BOSS_ID;
             const bossX = this.boss.x;
             const bossY = this.boss.y;
-            this.score += isFinalBoss ? 10000 : 4000;
+            this.addScore(isFinalBoss ? 10000 : 4000);
             if (isFinalBoss) {
               this.spawnFinalBossExplosion(bossX, bossY);
               this.game.audio.playExplosion(1.35);
@@ -1032,7 +1067,7 @@ export class GameplayScene {
           this.effects.push(new Explosion(enemy.x, enemy.y, "#ffa26f", 42));
           if (defeated) {
             this.enemies.splice(j, 1);
-            this.score += enemy.scoreValue;
+            this.addScore(enemy.scoreValue);
             this.game.audio.playExplosion(0.5);
             if (enemy.dropType) {
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: enemy.dropType }));
@@ -1077,7 +1112,7 @@ export class GameplayScene {
         if (distanceSq <= PLAYER_COLLISION_RADIUS * PLAYER_COLLISION_RADIUS) {
           this.effects.push(new Explosion(enemy.x, enemy.y, "#ffa26f", 48));
           this.enemies.splice(i, 1);
-          this.score += enemy.scoreValue;
+          this.addScore(enemy.scoreValue);
           this.game.audio.playExplosion(0.6);
           this.registerPlayerHit(index, 1, { cause: "enemy" });
           collided = true;
@@ -1340,14 +1375,14 @@ export class GameplayScene {
     const lifeIconSpacing = 22;
     const iconStart = 44;
     const lifeIconY = 18;
-    for (let i = 0; i < PLAYER_MAX_LIVES; i += 1) {
+    for (let i = 0; i < PLAYER_LIFE_CAP; i += 1) {
       const filled = i < lives;
       const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
       drawMiniFighter(ctx, iconStart + i * lifeIconSpacing, lifeIconY, color);
     }
 
     const shieldActive = player.shieldTimer > 0;
-    const shieldX = iconStart + PLAYER_MAX_LIVES * lifeIconSpacing + 18;
+    const shieldX = iconStart + PLAYER_LIFE_CAP * lifeIconSpacing + 18;
     drawShieldStatus(ctx, shieldX, lifeIconY, shieldActive, 0.9);
     ctx.save();
     ctx.textAlign = "left";
