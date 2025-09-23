@@ -1372,17 +1372,24 @@ export class GameplayScene {
 
     const weaponInfo = player.getWeaponDisplayInfo();
     const gaugeInactive = player.isEliminated || lives <= 0;
-    const lifeIconSpacing = 22;
-    const iconStart = 44;
+    const lifeIconX = 44;
     const lifeIconY = 18;
-    for (let i = 0; i < PLAYER_LIFE_CAP; i += 1) {
-      const filled = i < lives;
-      const color = filled ? accent : "rgba(255, 255, 255, 0.22)";
-      drawMiniFighter(ctx, iconStart + i * lifeIconSpacing, lifeIconY, color);
-    }
+    const iconColor = lives > 0 ? accent : "rgba(255, 255, 255, 0.22)";
+    drawMiniFighter(ctx, lifeIconX, lifeIconY, iconColor);
+
+    ctx.save();
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.font = `600 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+    const lifeLabel = `x${Math.max(0, lives)}`;
+    ctx.fillStyle = lives > 0 ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.4)";
+    const lifeTextX = lifeIconX + 26;
+    ctx.fillText(lifeLabel, lifeTextX, lifeIconY + 1);
+    const lifeLabelWidth = ctx.measureText(lifeLabel).width;
+    ctx.restore();
 
     const shieldActive = player.shieldTimer > 0;
-    const shieldX = iconStart + PLAYER_LIFE_CAP * lifeIconSpacing + 18;
+    const shieldX = lifeTextX + lifeLabelWidth + 18;
     drawShieldStatus(ctx, shieldX, lifeIconY, shieldActive, 0.9);
     ctx.save();
     ctx.textAlign = "left";
