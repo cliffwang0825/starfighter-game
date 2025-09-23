@@ -1,7 +1,10 @@
 export function updateBullets(bullets, dt, height, options = {}) {
-  const { width = null } = options;
+  const { width = null, seekingTargets = null, boss = null } = options;
   for (let i = bullets.length - 1; i >= 0; i -= 1) {
     const bullet = bullets[i];
+    if (bullet.homing) {
+      applyHomingSteer(bullet, dt, seekingTargets, boss);
+    }
     bullet.x += (bullet.velocityX ?? 0) * dt;
     bullet.y += bullet.velocityY * dt;
     const offscreenVertically = bullet.y + bullet.radius < -64 || bullet.y - bullet.radius > height + 64;
@@ -22,7 +25,8 @@ export function renderBullets(ctx, bullets) {
     const angle = Math.atan2(-vy, vx);
     ctx.rotate(isNaN(angle) ? 0 : angle + Math.PI / 2);
     const isLaser = bullet.type === "laser";
-    const length = bullet.radius * (isLaser ? 3.6 : 2.2);
+    const isMissile = bullet.type === "missile";
+    const length = bullet.radius * (isLaser ? 3.6 : isMissile ? 2.8 : 2.2);
     const gradient = ctx.createLinearGradient(0, -length, 0, length);
     if (bullet.friendly) {
       if (isLaser) {
@@ -30,6 +34,10 @@ export function renderBullets(ctx, bullets) {
         gradient.addColorStop(0.3, "#d4f3ff");
         gradient.addColorStop(0.7, "#64e1ff");
         gradient.addColorStop(1, "#1aa3ff");
+      } else if (isMissile) {
+        gradient.addColorStop(0, "#fff2d8");
+        gradient.addColorStop(0.5, "#ffc977");
+        gradient.addColorStop(1, "#ff8f2b");
       } else {
         gradient.addColorStop(0, "#ffffff");
         gradient.addColorStop(0.4, "#8ef0ff");
@@ -42,9 +50,60 @@ export function renderBullets(ctx, bullets) {
     }
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    const width = bullet.radius * (isLaser ? 0.55 : 0.8);
+    const width = bullet.radius * (isLaser ? 0.55 : isMissile ? 0.7 : 0.8);
     ctx.ellipse(0, 0, width, length, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
+}
+
+function applyHomingSteer(bullet, dt, seekingTargets, boss) {
+  const potentialTargets = [];
+  if (Array.isArray(seekingTargets)) {
+    for (const target of seekingTargets) {
+      if (!target || target.health <= 0) continue;
+      potentialTargets.push(target);
+    }
+  }
+  if (boss && !boss.isDefeated) {
+    potentialTargets.push(boss);
+  }
+  if (potentialTargets.length === 0) {
+    return;
+  }
+  let closest = null;
+  let closestDist = Infinity;
+  for (const target of potentialTargets) {
+    const dx = target.x - bullet.x;
+    const dy = target.y - bullet.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < closestDist) {
+      closest = target;
+      closestDist = distSq;
+    }
+  }
+  if (!closest) return;
+
+  const desiredAngle = Math.atan2(closest.y - bullet.y, closest.x - bullet.x);
+  const vx = bullet.velocityX ?? 0;
+  const vy = bullet.velocityY ?? -1;
+  const currentAngle = Math.atan2(vy, vx === 0 && vy === 0 ? 1 : vx);
+  let angleDiff = normalizeAngle(desiredAngle - currentAngle);
+  const turnRate = bullet.homing.turnRate ?? 4;
+  const maxTurn = turnRate * dt;
+  angleDiff = clamp(angleDiff, -maxTurn, maxTurn);
+  const newAngle = currentAngle + angleDiff;
+  const speed = bullet.homing.speed ?? Math.hypot(bullet.velocityX, bullet.velocityY) || 420;
+  bullet.velocityX = Math.cos(newAngle) * speed;
+  bullet.velocityY = Math.sin(newAngle) * speed;
+}
+
+function normalizeAngle(angle) {
+  while (angle > Math.PI) angle -= Math.PI * 2;
+  while (angle < -Math.PI) angle += Math.PI * 2;
+  return angle;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }

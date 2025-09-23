@@ -7,6 +7,7 @@ const PALETTE = {
   laser: { base: "#9f87ff", glow: "#e3dcff", stroke: "#4d3ab3", detail: "#f3f0ff" },
   shield: { base: "#6fb3ff", glow: "#c9e4ff", stroke: "#2d6cb2", detail: "#eff7ff" },
   health: { base: "#ff6d7a", glow: "#ffb6bf", stroke: "#9e2a34", detail: "#ffe5e8" },
+  canon: { base: "#ffc96b", glow: "#ffe7b4", stroke: "#a36b1a", detail: "#fff6df" },
 };
 
 export class PowerUp {
@@ -83,6 +84,9 @@ function drawPowerupIcon(ctx, type, palette) {
       break;
     case "laser":
       drawLaserIcon(ctx, palette);
+      break;
+    case "canon":
+      drawCanonIcon(ctx, palette);
       break;
     case "health":
       drawHealthIcon(ctx, palette);
@@ -268,6 +272,43 @@ function drawShieldIcon(ctx, palette) {
   ctx.moveTo(-3.5, -1);
   ctx.lineTo(3.5, -1);
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawCanonIcon(ctx, palette) {
+  ctx.save();
+  ctx.fillStyle = palette.base;
+  ctx.strokeStyle = palette.stroke;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(0, -14);
+  ctx.quadraticCurveTo(9, -6, 9, 4);
+  ctx.lineTo(9, 12);
+  ctx.quadraticCurveTo(0, 16, -9, 12);
+  ctx.lineTo(-9, 4);
+  ctx.quadraticCurveTo(-9, -6, 0, -14);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = clampColor(palette.stroke, 1.1);
+  ctx.beginPath();
+  ctx.moveTo(0, -10);
+  ctx.lineTo(0, 10);
+  ctx.stroke();
+
+  ctx.fillStyle = palette.detail;
+  ctx.font = "700 15px 'Inter', 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("C", 0, 2);
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+  ctx.beginPath();
+  ctx.ellipse(-2.5, -6, 4, 6, -Math.PI / 5, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.restore();
 }
 
