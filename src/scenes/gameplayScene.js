@@ -82,6 +82,8 @@ const BOSS_ENTRY_DELAY = 5;
 const WAVE_DURATION = 5;
 const MISSION_COMPLETE_DURATION = 2;
 const FINAL_BOSS_TRIGGER = 10;
+const FINAL_DETONATION_DURATION = 3;
+const FINAL_CONGRATS_DURATION = 3;
 
 const STAGES = [
   {
@@ -156,6 +158,12 @@ export class GameplayScene {
     this.finalTransitionProgress = 0;
     this.finalBossSpawned = false;
     this.finalVictoryTimer = -1;
+    this.finalExplosionTimer = 0;
+    this.finalCongratTimer = 0;
+    this.pendingDifficultyTier = null;
+    this.finalCompletionMessage = "";
+    this.finalCompletionSubtitle = "";
+    this.finalCompletionFooter = "";
     this.stagePaletteSnapshot = null;
     this.finalPalette = { ...FINAL_SPACE_PALETTE };
     this.paused = false;
@@ -232,6 +240,7 @@ export class GameplayScene {
     }
     this.starfield.update(dt);
     this.updateFinalSequence(dt);
+    this.updateFinalDefeatSequence(dt);
     if (this.finalVictoryTimer >= 0) {
       this.finalVictoryTimer -= dt;
       if (this.finalVictoryTimer <= 0) {
@@ -270,6 +279,8 @@ export class GameplayScene {
     if (
       !this.stageTransitionPending &&
       !this.finalSequenceActive &&
+      this.finalExplosionTimer <= 0 &&
+      this.finalCongratTimer <= 0 &&
       !this.boss &&
       this.stageTime < WAVE_DURATION &&
       this.waveTimer >= this.spawnDelay
@@ -305,9 +316,15 @@ export class GameplayScene {
       if (this.boss.isDefeated) {
         const defeatedId = this.boss.definition?.id;
         const isFinalBoss = defeatedId === FINAL_BOSS_ID;
+        const bossX = this.boss.x;
+        const bossY = this.boss.y;
         this.score += isFinalBoss ? 10000 : 4000;
-        this.game.audio.playExplosion(1.2);
-        this.effects.push(new Explosion(this.boss.x, this.boss.y, "#9fd6ff", isFinalBoss ? 200 : 120));
+        this.game.audio.playExplosion(isFinalBoss ? 1.35 : 1.2);
+        if (isFinalBoss) {
+          this.spawnFinalBossExplosion(bossX, bossY);
+        } else {
+          this.effects.push(new Explosion(bossX, bossY, "#9fd6ff", 120));
+        }
         if (!isFinalBoss) {
           this.dropBossRewards();
         }
@@ -324,7 +341,8 @@ export class GameplayScene {
       this.game.audio.setMusicStage(this.stageIndex + 1);
       this.bossSpawned = true;
       const bossIndex = Math.min(this.bossesDefeated, BOSS_COUNT - 1);
-      this.boss = new Boss(this.game, bossIndex, this.difficulty);
+      const bossDifficulty = this.getScaledBossDifficulty();
+      this.boss = new Boss(this.game, bossIndex, bossDifficulty);
     }
 
     if (this.bossWarningTimer > 0) {
@@ -429,10 +447,20 @@ export class GameplayScene {
         const defeated = this.boss.takeHit(BOMB_DAMAGE);
         const defeatedId = this.boss.definition?.id;
         const isFinalBoss = defeatedId === FINAL_BOSS_ID;
-        this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", defeated ? (isFinalBoss ? 200 : 140) : 100));
+        const bossX = this.boss.x;
+        const bossY = this.boss.y;
+        if (defeated) {
+          if (isFinalBoss) {
+            this.spawnFinalBossExplosion(bossX, bossY);
+          } else {
+            this.effects.push(new Explosion(bossX, bossY, "#ffffff", 140));
+          }
+        } else {
+          this.effects.push(new Explosion(bossX, bossY, "#ffffff", isFinalBoss ? 140 : 100));
+        }
         if (defeated) {
           this.score += isFinalBoss ? 10000 : 4000;
-          this.game.audio.playExplosion(1.1);
+          this.game.audio.playExplosion(isFinalBoss ? 1.35 : 1.1);
           if (!isFinalBoss) {
             this.dropBossRewards();
           }
@@ -526,10 +554,18 @@ export class GameplayScene {
     const currentTier = this.difficultyTier;
     const maxTier = DIFFICULTY_PRESETS.length - 1;
     const nextTier = Math.min(currentTier + 1, maxTier);
-    if (nextTier > currentTier) {
-      this.applyDifficultyPromotion(nextTier);
-    } else {
-      this.finalVictoryTimer = 5;
+    const hasNextTier = nextTier > currentTier;
+    this.finalExplosionTimer = FINAL_DETONATION_DURATION;
+    this.finalCongratTimer = 0;
+    const difficultyLabel = this.difficulty?.label ?? "";
+    this.finalCompletionMessage = "CONGRATULATIONS!";
+    this.finalCompletionSubtitle = `${difficultyLabel.toUpperCase()} ALL STAGES CLEARED`;
+    this.finalCompletionFooter = hasNextTier
+      ? `Advancing to ${DIFFICULTY_PRESETS[nextTier].label} difficulty...`
+      : "All difficulties mastered!";
+    this.pendingDifficultyTier = hasNextTier ? nextTier : null;
+    if (!hasNextTier) {
+      this.finalVictoryTimer = -1;
     }
   }
 
@@ -554,6 +590,12 @@ export class GameplayScene {
     this.finalTransitionProgress = 0;
     this.finalBossSpawned = false;
     this.finalVictoryTimer = -1;
+    this.finalExplosionTimer = 0;
+    this.finalCongratTimer = 0;
+    this.pendingDifficultyTier = null;
+    this.finalCompletionMessage = "";
+    this.finalCompletionSubtitle = "";
+    this.finalCompletionFooter = "";
     this.finalPalette = { ...FINAL_SPACE_PALETTE };
     this.stagePaletteSnapshot = null;
     this.enemies.length = 0;
@@ -592,7 +634,8 @@ export class GameplayScene {
     this.finalBossSpawned = true;
     this.finalTransitionProgress = 1;
     this.bossWarningTimer = 0;
-    this.boss = createFinalBoss(this.game, this.difficulty);
+    const bossDifficulty = this.getScaledBossDifficulty();
+    this.boss = createFinalBoss(this.game, bossDifficulty);
     this.game.audio.setMusicStage(this.stageIndex + 1);
     this.starfield.setPalette(this.finalPalette);
     this.currentStagePalette = { ...this.finalPalette };
@@ -616,6 +659,31 @@ export class GameplayScene {
     }
   }
 
+  updateFinalDefeatSequence(dt) {
+    if (this.finalExplosionTimer > 0) {
+      this.finalExplosionTimer = Math.max(0, this.finalExplosionTimer - dt);
+      if (this.finalExplosionTimer <= 0 && this.finalCongratTimer <= 0 && this.finalCompletionMessage) {
+        this.finalCongratTimer = FINAL_CONGRATS_DURATION;
+      }
+      return;
+    }
+    if (this.finalCongratTimer > 0) {
+      this.finalCongratTimer = Math.max(0, this.finalCongratTimer - dt);
+      if (this.finalCongratTimer <= 0) {
+        if (this.pendingDifficultyTier != null) {
+          const nextTier = this.pendingDifficultyTier;
+          this.pendingDifficultyTier = null;
+          this.applyDifficultyPromotion(nextTier);
+        } else if (this.finalVictoryTimer < 0) {
+          this.finalVictoryTimer = 0.1;
+        }
+        this.finalCompletionMessage = "";
+        this.finalCompletionSubtitle = "";
+        this.finalCompletionFooter = "";
+      }
+    }
+  }
+
   setLevelBanner({ text, subtitle }) {
     this.levelBannerTimer = LEVEL_BANNER_DURATION;
     this.levelBannerText = text;
@@ -633,6 +701,31 @@ export class GameplayScene {
         }),
       );
     }
+  }
+
+  spawnFinalBossExplosion(x, y) {
+    this.effects.push(new BombWave(x, y, 520, "#ff7bc7"));
+    this.effects.push(new BombWave(x, y, 420, "#ffe29f"));
+    this.effects.push(new Explosion(x, y, "#ffe29f", 340, FINAL_DETONATION_DURATION));
+    this.effects.push(new Explosion(x, y, "#ff9ddf", 300, FINAL_DETONATION_DURATION));
+    for (let i = 0; i < 4; i += 1) {
+      const offsetX = randRange(-120, 120);
+      const offsetY = randRange(-90, 90);
+      const radius = randRange(130, 190);
+      const life = randRange(1.1, 1.6);
+      const color = i % 2 === 0 ? "#ffe6ff" : "#ffc6e8";
+      this.effects.push(new Explosion(x + offsetX, y + offsetY, color, radius, life));
+    }
+  }
+
+  getScaledBossDifficulty() {
+    const base = this.difficulty ?? {};
+    const ramp = 1.08 ** Math.max(0, this.bossesDefeated);
+    const currentMultiplier = base.bossHealthMultiplier ?? 1;
+    return {
+      ...base,
+      bossHealthMultiplier: currentMultiplier * ramp,
+    };
   }
 
   applyStagePalette(stage) {
@@ -905,8 +998,16 @@ export class GameplayScene {
           if (defeated) {
             const defeatedId = this.boss.definition?.id;
             const isFinalBoss = defeatedId === FINAL_BOSS_ID;
+            const bossX = this.boss.x;
+            const bossY = this.boss.y;
             this.score += isFinalBoss ? 10000 : 4000;
-            this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", isFinalBoss ? 200 : 140));
+            if (isFinalBoss) {
+              this.spawnFinalBossExplosion(bossX, bossY);
+              this.game.audio.playExplosion(1.35);
+            } else {
+              this.effects.push(new Explosion(bossX, bossY, "#ffffff", 140));
+              this.game.audio.playExplosion(0.9);
+            }
             if (!isFinalBoss) {
               this.dropBossRewards();
             }
@@ -959,7 +1060,7 @@ export class GameplayScene {
         const radii = bullet.radius + player.radius * 0.8;
         if (distanceSq <= radii * radii) {
           this.enemyBullets.splice(i, 1);
-          this.registerPlayerHit(index, bullet.damage ?? 1);
+          this.registerPlayerHit(index, bullet.damage ?? 1, { cause: "bullet" });
           hit = true;
           break;
         }
@@ -978,7 +1079,7 @@ export class GameplayScene {
           this.enemies.splice(i, 1);
           this.score += enemy.scoreValue;
           this.game.audio.playExplosion(0.6);
-          this.registerPlayerHit(index);
+          this.registerPlayerHit(index, 1, { cause: "enemy" });
           collided = true;
           break;
         }
@@ -993,13 +1094,17 @@ export class GameplayScene {
         if (player.isInvulnerable || player.isEliminated) continue;
         const distSq = distanceSquared(player.x, player.y, this.boss.x, this.boss.y);
         if (distSq <= (this.boss.radius * 0.75 + player.radius) ** 2) {
-          this.registerPlayerHit(index, 2);
+          this.registerPlayerHit(index, 2, { cause: "boss" });
         }
       }
     }
   }
 
-  registerPlayerHit(playerIndex, damage = 1) {
+  registerPlayerHit(playerIndex, damage = 1, options = {}) {
+    const cause = options?.cause ?? null;
+    if (cause === "boss") {
+      this.encourageBossRetreatAfterCollision();
+    }
     const player = this.players[playerIndex];
     if (!player || player.isInvulnerable || player.isEliminated) return;
     player.takeHit(damage);
@@ -1025,6 +1130,30 @@ export class GameplayScene {
       player.invulnerableTimer = 2;
       this.playerBombs[playerIndex] = player.bombCapacity;
       this.bombTimers[playerIndex] = 0;
+    }
+  }
+
+  encourageBossRetreatAfterCollision() {
+    if (!this.boss) return;
+    if (typeof this.boss.phaseChargeTimer === "number" && this.boss.phaseChargeTimer > 0) {
+      this.boss.phaseChargeTimer = 0;
+    }
+    if (typeof this.boss.phaseRetreatTimer === "number" && this.boss.phaseRetreatTimer <= 0) {
+      const retreat = Math.max(this.boss.phaseRetreatDuration ?? 0.8, 0.8);
+      this.boss.phaseRetreatTimer = retreat;
+      this.boss.phaseRetreatDuration = retreat;
+    }
+    if (typeof this.boss.phaseChargeVelocityX === "number") {
+      this.boss.phaseChargeVelocityX *= 0.8;
+    }
+    if (typeof this.boss.phaseChargeVelocityY === "number") {
+      this.boss.phaseChargeVelocityY *= 0.6;
+    }
+    if (typeof this.boss.voidChargeDuration === "number" && this.boss.voidChargeDuration > 0) {
+      this.boss.voidChargeDuration = 0;
+    }
+    if (typeof this.boss.voidAftershockTimer === "number" && this.boss.voidAftershockTimer <= 0) {
+      this.boss.voidAftershockTimer = 0.4;
     }
   }
 
@@ -1116,6 +1245,9 @@ export class GameplayScene {
     }
     if (this.levelBannerTimer > 0) {
       this.renderLevelBanner(ctx);
+    }
+    if (this.finalCongratTimer > 0 && this.finalExplosionTimer <= 0 && this.finalCompletionMessage) {
+      this.renderFinalCompletionBanner(ctx);
     }
 
     ctx.restore();
@@ -1388,6 +1520,47 @@ export class GameplayScene {
     ctx.fillText(this.levelBannerText, this.game.width / 2, this.game.height * 0.24);
     ctx.font = `500 ${Math.max(16, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillText(this.levelBannerSubtitle, this.game.width / 2, this.game.height * 0.3 + 24);
+    ctx.restore();
+  }
+
+  renderFinalCompletionBanner(ctx) {
+    const progress = 1 - this.finalCongratTimer / FINAL_CONGRATS_DURATION;
+    const eased = Math.min(1, Math.max(0, progress));
+    ctx.save();
+    ctx.globalAlpha = 0.5 * eased;
+    ctx.fillStyle = "rgba(6, 10, 24, 0.82)";
+    ctx.fillRect(0, 0, this.game.width, this.game.height);
+    ctx.restore();
+
+    const width = Math.min(this.game.width * 0.72, 560);
+    const height = Math.max(this.game.height * 0.28, 160);
+    const x = (this.game.width - width) / 2;
+    const y = this.game.height * 0.32;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, 0.8 + eased * 0.2);
+    ctx.fillStyle = "rgba(20, 12, 32, 0.78)";
+    drawRoundedRect(ctx, x, y, width, height, 28);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255, 168, 220, 0.72)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = "center";
+    const centerX = this.game.width / 2;
+    ctx.fillStyle = "#fff0fb";
+    ctx.font = `800 ${Math.max(42, this.game.width * 0.062)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(this.finalCompletionMessage, centerX, y + height * 0.42);
+    ctx.fillStyle = "rgba(255, 225, 255, 0.92)";
+    ctx.font = `600 ${Math.max(20, this.game.width * 0.033)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText(this.finalCompletionSubtitle, centerX, y + height * 0.62);
+    if (this.finalCompletionFooter) {
+      ctx.fillStyle = "rgba(255, 216, 255, 0.82)";
+      ctx.font = `500 ${Math.max(16, this.game.width * 0.026)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(this.finalCompletionFooter, centerX, y + height * 0.78);
+    }
     ctx.restore();
   }
 
