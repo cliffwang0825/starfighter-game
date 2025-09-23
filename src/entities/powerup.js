@@ -1,7 +1,6 @@
 import { clamp } from "../utils.js";
 
 const PALETTE = {
-  canon: { base: "#ffd27f", glow: "#fff2c6", stroke: "#b37a1e", detail: "#fff7db" },
   bomb: { base: "#ffcf5a", glow: "#ffe6a1", stroke: "#b88928", detail: "#fff3c8" },
   speed: { base: "#4fe3c1", glow: "#9fffe6", stroke: "#1e7f6a", detail: "#e0fff5" },
   spread: { base: "#ff7bd5", glow: "#ffc5f2", stroke: "#a2478e", detail: "#ffe8f8" },
@@ -73,9 +72,6 @@ function clampColor(hex, factor) {
 
 function drawPowerupIcon(ctx, type, palette) {
   switch (type) {
-    case "canon":
-      drawCanonIcon(ctx, palette);
-      break;
     case "bomb":
       drawBombIcon(ctx, palette);
       break;
@@ -96,55 +92,6 @@ function drawPowerupIcon(ctx, type, palette) {
       drawShieldIcon(ctx, palette);
       break;
   }
-}
-
-function drawCanonIcon(ctx, palette) {
-  ctx.save();
-  ctx.strokeStyle = palette.stroke;
-  ctx.lineWidth = 2.2;
-  const bodyGradient = ctx.createLinearGradient(0, -12, 0, 14);
-  bodyGradient.addColorStop(0, palette.detail);
-  bodyGradient.addColorStop(1, palette.base);
-  ctx.fillStyle = bodyGradient;
-  drawRoundedRectPath(ctx, -12, -12, 24, 24, 6);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = clampColor(palette.base, 0.8);
-  drawRoundedRectPath(ctx, -8, -6, 16, 12, 4);
-  ctx.fill();
-
-  ctx.fillStyle = palette.detail;
-  ctx.strokeStyle = palette.stroke;
-  for (let i = -1; i <= 1; i += 1) {
-    const offset = i * 6;
-    ctx.beginPath();
-    ctx.moveTo(offset - 3, -12);
-    ctx.lineTo(offset + 3, -12);
-    ctx.lineTo(offset + 2, -2);
-    ctx.lineTo(offset - 2, -2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = palette.detail;
-  ctx.font = "700 13px 'Inter', 'Segoe UI', sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("C", 0, 6);
-
-  const glow = ctx.createLinearGradient(0, 10, 0, 20);
-  glow.addColorStop(0, `${palette.detail}aa`);
-  glow.addColorStop(1, "rgba(255, 255, 255, 0)");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.moveTo(0, 10);
-  ctx.quadraticCurveTo(6, 18, 0, 22);
-  ctx.quadraticCurveTo(-6, 18, 0, 10);
-  ctx.fill();
-
-  ctx.restore();
 }
 
 function drawBombIcon(ctx, palette) {

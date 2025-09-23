@@ -14,7 +14,7 @@ export class Player {
     this.moveSmoothing = 0.25;
     this.baseFireCooldown = 0.12;
     this.fireCooldown = this.baseFireCooldown;
-    this.weaponMode = "canon";
+    this.weaponMode = "spread";
     this.weaponLevel = 1;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
@@ -35,7 +35,7 @@ export class Player {
     this.velocityY = 0;
     this.fireTimer = 0;
     this.health = this.maxHealth;
-    this.weaponMode = "canon";
+    this.weaponMode = "spread";
     this.weaponLevel = 1;
     this.speedBoostTimer = 0;
     this.shieldTimer = 0;
@@ -154,52 +154,6 @@ export class Player {
             owner: this.playerIndex,
           });
         }
-      } else {
-        const bulletSpeed = -700 - activeLevel * 40;
-        const bulletDamage = activeLevel >= 3 ? 3 : activeLevel >= 2 ? 2 : 1;
-        const bulletRadius = 4 + Math.min(activeLevel, 2);
-        const patterns = [{ angle: 0, offsetX: 0, offsetY: -this.radius - 6 }];
-        if (activeLevel >= 3) {
-          patterns.push({ angle: -0.12, offsetX: -14, offsetY: -this.radius - 2 });
-          patterns.push({ angle: 0.12, offsetX: 14, offsetY: -this.radius - 2 });
-        }
-        for (const pattern of patterns) {
-          const speedX = Math.sin(pattern.angle) * Math.abs(bulletSpeed);
-          const speedY = Math.cos(pattern.angle) * bulletSpeed;
-          fired.push({
-            x: this.x + pattern.offsetX,
-            y: this.y + pattern.offsetY,
-            velocityY: speedY,
-            velocityX: speedX,
-            radius: bulletRadius,
-            friendly: true,
-            damage: bulletDamage,
-            owner: this.playerIndex,
-            type: "canon",
-          });
-        }
-        if (activeLevel >= 2) {
-          const missileCount = activeLevel >= 3 ? 2 : 1;
-          const missileDamage = activeLevel >= 3 ? 3 : 2;
-          const offsets = missileCount === 1 ? [0] : [-18, 18];
-          offsets.forEach((offsetX) => {
-            fired.push({
-              x: this.x + offsetX,
-              y: this.y - this.radius + 8,
-              velocityY: -260,
-              velocityX: 0,
-              radius: 6,
-              friendly: true,
-              damage: missileDamage,
-              owner: this.playerIndex,
-              type: "missile",
-              seeksEnemies: true,
-              seekStrength: activeLevel >= 3 ? 5 : 4,
-              maxSpeed: 480 + activeLevel * 60,
-              trailColor: this.palette?.accent ?? "#9fd6ff",
-            });
-          });
-        }
       }
       if (fired.length > 0) {
         this.game.audio.playShot();
@@ -219,9 +173,6 @@ export class Player {
     } else if (this.weaponMode === "laser") {
       const presets = [this.baseFireCooldown, 0.24, 0.2, 0.16];
       cooldown = presets[storedLevel] ?? 0.16;
-    } else if (this.weaponMode === "canon") {
-      const presets = [this.baseFireCooldown, 0.12, 0.1, 0.085];
-      cooldown = presets[storedLevel] ?? 0.085;
     }
     if (this.speedBoostTimer > 0) {
       cooldown *= 0.72;
@@ -272,17 +223,6 @@ export class Player {
         this.weaponLevel = this.getStoredWeaponLevel();
         break;
       }
-      case "canon": {
-        if (this.weaponMode === "canon") {
-          this.weaponLevel = Math.min(3, this.weaponLevel + 1);
-        } else {
-          this.weaponLevel = Math.max(1, Math.min(3, this.weaponLevel));
-        }
-        this.weaponMode = "canon";
-        this.updateDerivedStats();
-        this.weaponLevel = this.getStoredWeaponLevel();
-        break;
-      }
       case "health":
         this.heal(1);
         break;
@@ -316,7 +256,7 @@ export class Player {
       case "laser":
         return "LASER";
       default:
-        return "CANON";
+        return "PRIMARY";
     }
   }
 
