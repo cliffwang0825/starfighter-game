@@ -1,4 +1,4 @@
-import { clamp, randChoice, randRange } from "../utils.js";
+import { clamp, randChoice, randRange, maybeDropFrom } from "../utils.js";
 import { Enemy } from "./enemy.js";
 
 const DEFAULT_PHASE_THRESHOLDS = [0.4];
@@ -111,7 +111,7 @@ const BOSS_TYPES = [
             health: phaseTwo ? 5 : 4,
             speedY: 150,
             scoreValue: 250,
-            dropType: randChoice(["speed", "spread", "health"]),
+            dropType: maybeDropFrom(["speed", "spread", "health"]),
           }),
         );
         spawns.push(
@@ -124,7 +124,7 @@ const BOSS_TYPES = [
             health: phaseTwo ? 5 : 4,
             speedY: 150,
             scoreValue: 250,
-            dropType: randChoice(["bomb", "shield", "laser", "health"]),
+            dropType: maybeDropFrom(["bomb", "shield", "laser", "health"]),
           }),
         );
         if (phaseTwo) {
@@ -139,7 +139,7 @@ const BOSS_TYPES = [
               speedY: 200,
               burst: 2,
               scoreValue: 320,
-              dropType: randChoice(["bomb", "shield", "laser"]),
+              dropType: maybeDropFrom(["bomb", "shield", "laser"]),
             }),
           );
         }
@@ -198,7 +198,7 @@ const BOSS_TYPES = [
               health: phaseTwo ? 6 : 5,
               speedY: phaseTwo ? 150 : 120,
               scoreValue: 320,
-              dropType: randChoice(["bomb", "speed", "spread", "shield", "laser", "health"]),
+              dropType: maybeDropFrom(["bomb", "speed", "spread", "shield", "laser", "health"]),
             }),
           );
         }
@@ -214,7 +214,7 @@ const BOSS_TYPES = [
               health: 6,
               speedY: 160,
               scoreValue: 360,
-              dropType: randChoice(["shield", "laser", "health"]),
+              dropType: maybeDropFrom(["shield", "laser", "health"]),
             }),
           );
         }
@@ -426,7 +426,7 @@ const BOSS_TYPES = [
             health: phaseTwo ? 6 : 5,
             speedY: phaseTwo ? 150 : 130,
             scoreValue: 280,
-            dropType: randChoice(["shield", "speed", "health"]),
+            dropType: maybeDropFrom(["shield", "speed", "health"]),
           }),
         );
         spawns.push(
@@ -439,7 +439,7 @@ const BOSS_TYPES = [
             health: phaseTwo ? 6 : 5,
             speedY: phaseTwo ? 150 : 130,
             scoreValue: 280,
-            dropType: randChoice(["laser", "bomb", "health"]),
+            dropType: maybeDropFrom(["laser", "bomb", "health"]),
           }),
         );
         if (phaseTwo) {
@@ -454,7 +454,7 @@ const BOSS_TYPES = [
               speedY: 180,
               burst: 3,
               scoreValue: 320,
-              dropType: randChoice(["bomb", "shield", "health"]),
+              dropType: maybeDropFrom(["bomb", "shield", "health"]),
             }),
           );
         }
@@ -525,7 +525,7 @@ const BOSS_TYPES = [
             health: phaseTwo ? 7 : 6,
             speedY: phaseTwo ? 180 : 150,
             scoreValue: 340,
-            dropType: randChoice(["bomb", "spread", "shield", "health"]),
+            dropType: maybeDropFrom(["bomb", "spread", "shield", "health"]),
           }),
         );
       }
@@ -635,7 +635,7 @@ const FINAL_BOSS_PALETTE = {
 const FINAL_BOSS_TEMPLATE = {
   id: "void_emperor",
   name: "Oblivion Apex Sovereign",
-  health: 480,
+  health: 720,
   radius: 140,
   phaseThresholds: [0.65, 0.4],
   phaseScale: [1, 0.82, 0.68],
@@ -880,6 +880,9 @@ function handlePhaseCharge(boss, dt, target, config = {}) {
     boss.phaseCharging = true;
     boss.phaseChargeCooldown = randRange(intervalMin, intervalMax);
     boss.phaseChargeTimer = config.duration ?? 1.2;
+    boss.phaseRetreatTimer = 0;
+    boss.phaseChargeVelocityX = 0;
+    boss.phaseChargeVelocityY = 0;
     boss.phaseChargeTarget = target
       ? { x: target.x, y: Math.min(target.y, boss.game.height * (config.diveDepth ?? 0.75)) }
       : { x: boss.game.width / 2, y: boss.game.height * (config.diveDepth ?? 0.75) };
@@ -888,16 +891,41 @@ function handlePhaseCharge(boss, dt, target, config = {}) {
     boss.phaseChargeTimer -= dt;
     const speed = config.speed ?? 240;
     const angle = Math.atan2(boss.phaseChargeTarget.y - boss.y, boss.phaseChargeTarget.x - boss.x);
-    boss.x = clamp(boss.x + Math.cos(angle) * speed * dt, boss.radius, boss.game.width - boss.radius);
-    boss.y = clamp(boss.y + Math.sin(angle) * speed * dt, boss.radius, boss.game.height * (config.diveDepth ?? 0.75));
+    const velocityX = Math.cos(angle) * speed;
+    const velocityY = Math.sin(angle) * speed;
+    boss.phaseChargeVelocityX = velocityX;
+    boss.phaseChargeVelocityY = velocityY;
+    boss.x = clamp(boss.x + velocityX * dt, boss.radius, boss.game.width - boss.radius);
+    boss.y = clamp(
+      boss.y + velocityY * dt,
+      boss.radius,
+      boss.game.height * (config.diveDepth ?? 0.75),
+    );
     if (boss.phaseChargeTimer <= 0 || Math.abs(boss.y - boss.phaseChargeTarget.y) < 12) {
       boss.phaseCharging = false;
       boss.phaseRetreatTimer = config.recovery ?? 0.8;
+      boss.phaseRetreatDuration = boss.phaseRetreatTimer;
     }
     return true;
   }
   if (boss.phaseRetreatTimer > 0) {
-    boss.phaseRetreatTimer -= dt;
+    const duration = boss.phaseRetreatDuration ?? config.recovery ?? 0.8;
+    boss.phaseRetreatTimer = Math.max(0, boss.phaseRetreatTimer - dt);
+    const t = duration > 0 ? boss.phaseRetreatTimer / duration : 0;
+    const easing = t * t;
+    const velocityX = boss.phaseChargeVelocityX ?? 0;
+    const velocityY = boss.phaseChargeVelocityY ?? 0;
+    boss.x = clamp(boss.x + velocityX * dt * easing, boss.radius, boss.game.width - boss.radius);
+    boss.y = clamp(
+      boss.y + velocityY * dt * easing,
+      boss.radius,
+      boss.game.height * (config.diveDepth ?? 0.75),
+    );
+    if (boss.phaseRetreatTimer <= 0) {
+      boss.phaseChargeVelocityX = 0;
+      boss.phaseChargeVelocityY = 0;
+    }
+    return true;
   }
   boss.y = clamp(boss.y + (boss.targetY - boss.y) * Math.min(3 * dt, 1), boss.radius, boss.targetY);
   return false;

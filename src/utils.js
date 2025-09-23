@@ -10,6 +10,16 @@ export function randChoice(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+export function maybeDropType(type, chance = 0.5) {
+  if (!type) return null;
+  return Math.random() <= chance ? type : null;
+}
+
+export function maybeDropFrom(options, chance = 0.5) {
+  if (!options?.length) return null;
+  return Math.random() <= chance ? randChoice(options) : null;
+}
+
 export function distanceSquared(ax, ay, bx, by) {
   const dx = ax - bx;
   const dy = ay - by;

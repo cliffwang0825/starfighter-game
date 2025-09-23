@@ -12,7 +12,7 @@ import {
   createFinalBoss,
   FINAL_BOSS_ID,
 } from "../entities/bosses.js";
-import { distanceSquared, randChoice, randRange } from "../utils.js";
+import { distanceSquared, randChoice, randRange, maybeDropFrom, maybeDropType } from "../utils.js";
 import { DebriefScene } from "./debriefScene.js";
 
 export const DIFFICULTY_PRESETS = [
@@ -78,6 +78,11 @@ const FINAL_SPACE_PALETTE = {
   star: "rgba(255, 102, 160, 0.9)",
 };
 
+const BOSS_ENTRY_DELAY = 10;
+const WAVE_DURATION = 10;
+const MISSION_COMPLETE_DURATION = 2;
+const FINAL_BOSS_TRIGGER = 10;
+
 const STAGES = [
   {
     name: "Outer Rim Patrol",
@@ -109,6 +114,14 @@ export class GameplayScene {
   constructor(game, difficulty = DIFFICULTY_PRESETS[1], playerCount = MAX_PLAYER_COUNT) {
     this.game = game;
     this.difficulty = difficulty ?? DIFFICULTY_PRESETS[1];
+    this.difficultyTier = DIFFICULTY_PRESETS.findIndex((preset) => preset.id === this.difficulty.id);
+    if (this.difficultyTier < 0) {
+      this.difficultyTier = DIFFICULTY_PRESETS.findIndex((preset) => preset.label === this.difficulty.label);
+    }
+    if (this.difficultyTier < 0) {
+      this.difficultyTier = 1;
+      this.difficulty = DIFFICULTY_PRESETS[this.difficultyTier];
+    }
     this.playerCount = Math.max(1, Math.min(MAX_PLAYER_COUNT, Math.round(playerCount) || 1));
     this.starfield = new Starfield(game, 220);
     this.starfield.setBrightness(0.5);
@@ -132,6 +145,10 @@ export class GameplayScene {
     this.levelBannerTimer = 0;
     this.levelBannerText = "";
     this.levelBannerSubtitle = "";
+    this.missionCompleteTimer = 0;
+    this.missionCompleteText = "";
+    this.missionCompleteSubtitle = "";
+    this.stageTransitionPending = false;
     this.currentStarColor = null;
     this.currentStagePalette = null;
     this.finalSequenceActive = false;
@@ -209,7 +226,10 @@ export class GameplayScene {
     }
 
     this.time += dt;
-    this.stageTime += dt;
+    if (!this.stageTransitionPending) {
+      this.stageTime += dt;
+      this.waveTimer += dt;
+    }
     this.starfield.update(dt);
     this.updateFinalSequence(dt);
     if (this.finalVictoryTimer >= 0) {
@@ -228,6 +248,12 @@ export class GameplayScene {
     if (this.levelBannerTimer > 0) {
       this.levelBannerTimer = Math.max(0, this.levelBannerTimer - dt);
     }
+    if (this.missionCompleteTimer > 0) {
+      this.missionCompleteTimer = Math.max(0, this.missionCompleteTimer - dt);
+      if (this.missionCompleteTimer <= 0 && this.stageTransitionPending) {
+        this.finalizeStageTransition();
+      }
+    }
 
     const activePlayers = this.getActivePlayers();
     this.activePlayerCount = activePlayers.length;
@@ -241,8 +267,13 @@ export class GameplayScene {
 
     this.handleBombInput(dt, activePlayers);
 
-    this.waveTimer += dt;
-    if (!this.finalSequenceActive && !this.boss && this.stageTime < 30 && this.waveTimer >= this.spawnDelay) {
+    if (
+      !this.stageTransitionPending &&
+      !this.finalSequenceActive &&
+      !this.boss &&
+      this.stageTime < WAVE_DURATION &&
+      this.waveTimer >= this.spawnDelay
+    ) {
       this.waveTimer = 0;
       this.spawnWave();
       this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay) * this.difficulty.spawnDelayMultiplier;
@@ -282,14 +313,9 @@ export class GameplayScene {
         }
         this.boss = null;
         if (isFinalBoss) {
-          this.finalVictoryTimer = 5;
+          this.handleFinalBossVictory();
         } else {
-          this.bossesDefeated += 1;
-          if (this.bossesDefeated >= BOSS_COUNT) {
-            this.beginFinalSequence();
-          } else {
-            this.advanceStage();
-          }
+          this.handleStandardBossVictory();
         }
       }
     } else if (this.shouldSummonBoss()) {
@@ -401,12 +427,21 @@ export class GameplayScene {
       const hitBoss = distanceSquared(player.x, player.y, this.boss.x, this.boss.y) <= effectiveRadius * effectiveRadius;
       if (hitBoss) {
         const defeated = this.boss.takeHit(BOMB_DAMAGE);
-        this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", defeated ? 140 : 100));
+        const defeatedId = this.boss.definition?.id;
+        const isFinalBoss = defeatedId === FINAL_BOSS_ID;
+        this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", defeated ? (isFinalBoss ? 200 : 140) : 100));
         if (defeated) {
-          this.score += 4000;
-          this.dropBossRewards();
+          this.score += isFinalBoss ? 10000 : 4000;
+          this.game.audio.playExplosion(1.1);
+          if (!isFinalBoss) {
+            this.dropBossRewards();
+          }
           this.boss = null;
-          this.advanceStage();
+          if (isFinalBoss) {
+            this.handleFinalBossVictory();
+          } else {
+            this.handleStandardBossVictory();
+          }
         }
       }
     }
@@ -416,11 +451,18 @@ export class GameplayScene {
     if (this.finalSequenceActive) {
       return false;
     }
-    return !this.boss && !this.bossSpawned && this.stageTime >= 30 && this.enemies.length === 0;
+    if (this.stageTransitionPending) {
+      return false;
+    }
+    return !this.boss && !this.bossSpawned && this.stageTime >= BOSS_ENTRY_DELAY && this.enemies.length === 0;
   }
 
   advanceStage() {
     const previousIndex = this.stageIndex;
+    this.stageTransitionPending = false;
+    this.missionCompleteTimer = 0;
+    this.missionCompleteText = "";
+    this.missionCompleteSubtitle = "";
     this.levelNumber += 1;
     this.stageIndex = Math.min(this.levelNumber - 1, STAGES.length - 1);
     const stage = STAGES[this.stageIndex];
@@ -438,6 +480,94 @@ export class GameplayScene {
     this.setLevelBanner({
       text: "晉級到下一個 LEVEL",
       subtitle,
+    });
+  }
+
+  beginStageTransition() {
+    if (this.stageTransitionPending) {
+      return;
+    }
+    this.stageTransitionPending = true;
+    this.waveTimer = 0;
+    this.levelBannerTimer = 0;
+    this.levelBannerText = "";
+    this.levelBannerSubtitle = "";
+    const stage = STAGES[this.stageIndex];
+    const label = `Stage ${this.levelNumber}`;
+    this.missionCompleteText = "MISSION COMPLETE";
+    this.missionCompleteSubtitle = stage ? `${label} • ${stage.name}` : label;
+    this.missionCompleteTimer = MISSION_COMPLETE_DURATION;
+  }
+
+  finalizeStageTransition() {
+    if (!this.stageTransitionPending) {
+      return;
+    }
+    this.stageTransitionPending = false;
+    this.missionCompleteTimer = 0;
+    this.advanceStage();
+  }
+
+  handleStandardBossVictory() {
+    this.bossesDefeated += 1;
+    if (this.bossesDefeated >= FINAL_BOSS_TRIGGER) {
+      this.beginFinalSequence();
+    } else {
+      this.beginStageTransition();
+    }
+  }
+
+  handleFinalBossVictory() {
+    this.finalSequenceActive = false;
+    this.finalWarningTimer = 0;
+    this.finalTransitionProgress = 0;
+    this.finalBossSpawned = false;
+    this.stagePaletteSnapshot = null;
+    const currentTier = this.difficultyTier;
+    const maxTier = DIFFICULTY_PRESETS.length - 1;
+    const nextTier = Math.min(currentTier + 1, maxTier);
+    if (nextTier > currentTier) {
+      this.applyDifficultyPromotion(nextTier);
+    } else {
+      this.finalVictoryTimer = 5;
+    }
+  }
+
+  applyDifficultyPromotion(nextTier) {
+    this.difficultyTier = nextTier;
+    this.difficulty = DIFFICULTY_PRESETS[nextTier];
+    this.bossesDefeated = 0;
+    this.levelNumber = 1;
+    this.stageIndex = 0;
+    this.stageTime = 0;
+    this.waveTimer = 0;
+    this.spawnDelay = randRange(...STAGES[0].spawnDelay) * this.difficulty.spawnDelayMultiplier;
+    this.boss = null;
+    this.bossSpawned = false;
+    this.bossWarningTimer = 0;
+    this.stageTransitionPending = false;
+    this.missionCompleteTimer = 0;
+    this.missionCompleteText = "";
+    this.missionCompleteSubtitle = "";
+    this.finalSequenceActive = false;
+    this.finalWarningTimer = 0;
+    this.finalTransitionProgress = 0;
+    this.finalBossSpawned = false;
+    this.finalVictoryTimer = -1;
+    this.finalPalette = { ...FINAL_SPACE_PALETTE };
+    this.stagePaletteSnapshot = null;
+    this.enemies.length = 0;
+    this.enemyBullets.length = 0;
+    this.playerBullets.length = 0;
+    this.powerUps.length = 0;
+    this.effects.length = 0;
+    resetBossPaletteCycle();
+    const initialStage = STAGES[0];
+    this.applyStagePalette(initialStage);
+    this.game.audio.setMusicStage(0);
+    this.setLevelBanner({
+      text: `${this.difficulty.label} Stage 1`,
+      subtitle: initialStage.name,
     });
   }
 
@@ -540,7 +670,7 @@ export class GameplayScene {
             amplitude: 18,
             frequency: 2.1,
             fireCooldown: 2.3,
-            dropType: i === 2 ? randChoice(["spread", "health"]) : null,
+            dropType: i === 2 ? maybeDropFrom(["spread", "health"]) : null,
           }),
         );
       }
@@ -554,7 +684,7 @@ export class GameplayScene {
             amplitude: 46,
             frequency: 2.6 + i * 0.4,
             fireCooldown: 1.8,
-            dropType: i === lanes - 1 ? "speed" : null,
+            dropType: i === lanes - 1 ? maybeDropType("speed") : null,
           }),
         );
       }
@@ -567,7 +697,7 @@ export class GameplayScene {
             y: -i * 50 - 70,
             amplitude: 0,
             fireCooldown: 1.5,
-            dropType: i === 0 ? "bomb" : null,
+            dropType: i === 0 ? maybeDropType("bomb") : null,
           }),
         );
       }
@@ -588,7 +718,7 @@ export class GameplayScene {
             frequency: 3.2,
             fireCooldown: 1.3,
             burst: 2,
-            dropType: i === 3 ? randChoice(["shield", "health"]) : null,
+            dropType: i === 3 ? maybeDropFrom(["shield", "health"]) : null,
           }),
         );
       }
@@ -603,7 +733,12 @@ export class GameplayScene {
             frequency: 4.2,
             fireCooldown: 1.4,
             burst: 3,
-            dropType: i === 5 ? "laser" : i === 2 ? randChoice(["speed", "health"]) : null,
+            dropType:
+              i === 5
+                ? maybeDropType("laser")
+                : i === 2
+                ? maybeDropFrom(["speed", "health"])
+                : null,
           }),
         );
       }
@@ -622,7 +757,7 @@ export class GameplayScene {
             fireCooldown: 1.1,
             burst: 3,
             scoreValue: 220,
-            dropType: i === 1 ? randChoice(["speed", "health"]) : null,
+            dropType: i === 1 ? maybeDropFrom(["speed", "health"]) : null,
           }),
         );
       }
@@ -635,7 +770,7 @@ export class GameplayScene {
         burst: 3,
         burstSpread: 0.35,
         health: 5,
-        dropType: "bomb",
+        dropType: maybeDropType("bomb"),
       });
       const right = this.createEnemy({
         x: width * 0.72,
@@ -645,7 +780,7 @@ export class GameplayScene {
         burst: 3,
         burstSpread: 0.35,
         health: 5,
-        dropType: "spread",
+        dropType: maybeDropType("spread"),
       });
       this.enemies.push(left, right);
     }
@@ -664,7 +799,7 @@ export class GameplayScene {
             frequency: 4.4,
             fireCooldown: 1.1,
             burst: 3,
-            dropType: i % 3 === 0 ? randChoice(["speed", "shield", "health"]) : null,
+            dropType: i % 3 === 0 ? maybeDropFrom(["speed", "shield", "health"]) : null,
           }),
         );
       }
@@ -680,7 +815,7 @@ export class GameplayScene {
             fireCooldown: 0.95,
             burst: 4,
             burstSpread: 0.4,
-            dropType: i === 2 ? "bomb" : null,
+            dropType: i === 2 ? maybeDropType("bomb") : null,
           }),
         );
       }
@@ -698,7 +833,7 @@ export class GameplayScene {
             wobbleFrequency: 1.1,
             health: 5,
             scoreValue: 260,
-            dropType: i === 2 ? "bomb" : null,
+            dropType: i === 2 ? maybeDropType("bomb") : null,
           }),
         );
       }
@@ -715,7 +850,14 @@ export class GameplayScene {
             burstSpread: 0.5,
             health: 6,
             speedY: 150,
-            dropType: i === 1 ? "laser" : i === 0 ? "spread" : i === 2 ? "health" : null,
+            dropType:
+              i === 1
+                ? maybeDropType("laser")
+                : i === 0
+                ? maybeDropType("spread")
+                : i === 2
+                ? maybeDropType("health")
+                : null,
           }),
         );
       }
@@ -761,11 +903,19 @@ export class GameplayScene {
           this.game.audio.playExplosion(0.4);
           this.effects.push(new Explosion(bullet.x, bullet.y, "#9fd6ff", 44));
           if (defeated) {
-            this.score += 4000;
-            this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", 140));
-            this.dropBossRewards();
+            const defeatedId = this.boss.definition?.id;
+            const isFinalBoss = defeatedId === FINAL_BOSS_ID;
+            this.score += isFinalBoss ? 10000 : 4000;
+            this.effects.push(new Explosion(this.boss.x, this.boss.y, "#ffffff", isFinalBoss ? 200 : 140));
+            if (!isFinalBoss) {
+              this.dropBossRewards();
+            }
             this.boss = null;
-            this.advanceStage();
+            if (isFinalBoss) {
+              this.handleFinalBossVictory();
+            } else {
+              this.handleStandardBossVictory();
+            }
           }
           hit = true;
         }
@@ -785,7 +935,7 @@ export class GameplayScene {
             this.game.audio.playExplosion(0.5);
             if (enemy.dropType) {
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: enemy.dropType }));
-            } else if (Math.random() < 0.032) {
+            } else if (Math.random() < 0.016) {
               const types = ["bomb", "spread", "laser", "speed", "shield", "health"];
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: randChoice(types) }));
             }
@@ -961,6 +1111,9 @@ export class GameplayScene {
       ctx.restore();
     }
 
+    if (this.missionCompleteTimer > 0) {
+      this.renderMissionComplete(ctx);
+    }
     if (this.levelBannerTimer > 0) {
       this.renderLevelBanner(ctx);
     }
@@ -992,7 +1145,7 @@ export class GameplayScene {
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
     ctx.font = `500 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText(this.difficulty.label, x + width - 12, y + 16);
+    ctx.fillText(`${this.difficulty.label} Stage:${this.levelNumber}`, x + width - 12, y + 16);
     ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
     ctx.font = `500 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillText(`${this.playerCount}P`, x + width - 12, y + height - 12);
@@ -1052,13 +1205,6 @@ export class GameplayScene {
 
     const weaponInfo = player.getWeaponDisplayInfo();
     const gaugeInactive = player.isEliminated || lives <= 0;
-    ctx.save();
-    ctx.textAlign = "right";
-    ctx.font = `600 ${Math.max(11, this.game.width * 0.018)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillStyle = player.isEliminated || lives <= 0 ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.82)";
-    ctx.fillText(`${weaponInfo.label} Lv${weaponInfo.level}`, width - 12, 16);
-    ctx.restore();
-
     const lifeIconSpacing = 22;
     const iconStart = 44;
     const lifeIconY = 18;
@@ -1111,23 +1257,22 @@ export class GameplayScene {
     const gaugeHeight = 6;
     const totalGaugeWidth = gaugeSegments * gaugeWidth + (gaugeSegments - 1) * gaugeSpacing;
     const gaugeStartX = width - 12 - totalGaugeWidth;
-    const gaugeY = height - 20;
+    const gaugeY = height - 22;
     ctx.save();
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.font = `600 ${Math.max(9, this.game.width * 0.015)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillStyle = gaugeInactive ? "rgba(255, 255, 255, 0.35)" : "rgba(255, 255, 255, 0.55)";
-    ctx.fillText("LV", gaugeStartX - 6, gaugeY + gaugeHeight / 2);
+    ctx.fillStyle = gaugeInactive ? "rgba(255, 255, 255, 0.38)" : "rgba(255, 255, 255, 0.78)";
+    ctx.fillText(weaponInfo.label, gaugeStartX - 10, gaugeY + gaugeHeight / 2);
     ctx.restore();
     for (let i = 0; i < gaugeSegments; i += 1) {
       const filled = i < weaponInfo.gaugeLevel;
-      const fillColor = gaugeInactive
+      const baseColor = gaugeInactive
         ? filled
           ? "rgba(255, 255, 255, 0.32)"
           : "rgba(255, 255, 255, 0.18)"
-        : filled
-        ? accent
-        : "rgba(255, 255, 255, 0.22)";
+        : weaponInfo.gaugeColor;
+      const fillColor = filled ? baseColor : gaugeInactive ? "rgba(255, 255, 255, 0.14)" : "rgba(255, 255, 255, 0.22)";
       ctx.fillStyle = fillColor;
       drawRoundedRect(
         ctx,
@@ -1212,6 +1357,24 @@ export class GameplayScene {
       this.game.width - 20,
       this.game.height - 24,
     );
+    ctx.restore();
+  }
+
+  renderMissionComplete(ctx) {
+    if (!this.missionCompleteText) return;
+    ctx.save();
+    const elapsed = MISSION_COMPLETE_DURATION - this.missionCompleteTimer;
+    const progress = Math.max(0, Math.min(1, elapsed / MISSION_COMPLETE_DURATION));
+    const alpha = Math.sin(progress * Math.PI) * 0.88;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "rgba(255, 228, 170, 0.95)";
+    ctx.font = `700 ${Math.max(34, this.game.width * 0.058)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(this.missionCompleteText, this.game.width / 2, this.game.height * 0.26);
+    if (this.missionCompleteSubtitle) {
+      ctx.font = `500 ${Math.max(18, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.fillText(this.missionCompleteSubtitle, this.game.width / 2, this.game.height * 0.26 + 42);
+    }
     ctx.restore();
   }
 
