@@ -4,7 +4,8 @@ A horizontal scrolling space shooter built with HTML5/JavaScript.
 Defeat waves of enemies and face multi-phase BOSS battles, culminating in the epic **Final BOSS**!
 
 ## 🎮 Play Now
-👉 [Click here to play Star Fighter](https://<你的GitHub帳號>.github.io/<repo名稱>/)
+[![Play on GitHub Pages](https://img.shields.io/badge/▶%20Play%20Star%20Fighter-blueviolet?style=for-the-badge)](https://cliffwang0825.github.io/starfighter-game/)
+
 
 *(Make sure to replace `<你的GitHub帳號>` and `<repo名稱>` with your actual GitHub username and repository name.)*
 
