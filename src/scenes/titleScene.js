@@ -212,8 +212,10 @@ export class TitleScene {
   }
 
   calculateInstructionButton() {
-    const width = Math.min(220, this.game.width * 0.32);
-    const height = Math.max(44, this.game.height * 0.07);
+    const baseWidth = Math.min(220, this.game.width * 0.32);
+    const baseHeight = Math.max(44, this.game.height * 0.07);
+    const width = baseWidth * 0.5;
+    const height = baseHeight * 0.5;
     const margin = Math.max(18, this.game.width * 0.024);
     const x = this.game.width - width - margin;
     const y = this.game.height - height - margin;
