@@ -264,7 +264,7 @@ export class Player {
     const gaugeLevel = this.getStoredWeaponLevel();
     let gaugeColor = "#ffd86d";
     if (this.weaponMode === "spread") {
-      gaugeColor = "#ff6565";
+      gaugeColor = "#ff8a3c";
     } else if (this.weaponMode === "laser") {
       gaugeColor = "#5aa8ff";
     }

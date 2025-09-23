@@ -543,16 +543,31 @@ const BOSS_TYPES = [
       boss.phaseTimer = (boss.phaseTimer || scaledInterval(phaseTwo ? 3 : 4, boss, { ignorePhase: true })) - dt;
       boss.weaponTimer = (boss.weaponTimer || 0) - dt;
       boss.secondaryTimer = (boss.secondaryTimer || 0) - dt;
+      if (boss.phaseShiftTargetX === undefined) {
+        boss.phaseShiftTargetX = boss.x;
+      }
       const bullets = [];
       if (boss.phaseTimer <= 0) {
         boss.phaseTimer = scaledInterval(phaseTwo ? 3 : 4, boss, { ignorePhase: true });
-        boss.x = clamp(randRange(boss.radius, boss.game.width - boss.radius), boss.radius, boss.game.width - boss.radius);
+        boss.phaseShiftTargetX = clamp(
+          randRange(boss.radius, boss.game.width - boss.radius),
+          boss.radius,
+          boss.game.width - boss.radius,
+        );
         const ring = Math.max(6, scaledCount(phaseTwo ? 10 : 8, boss, { ignorePhase: true }));
         for (let i = 0; i < ring; i += 1) {
           const angle = (i / ring) * Math.PI * 2;
           bullets.push(makeBossBullet(boss, angle, phaseTwo ? 280 : 240, 5));
         }
       }
+      const shiftTargetX = clamp(boss.phaseShiftTargetX, boss.radius, boss.game.width - boss.radius);
+      boss.phaseShiftTargetX = shiftTargetX;
+      const shiftRate = phaseTwo ? 3 : 2.2;
+      boss.x = clamp(
+        boss.x + (shiftTargetX - boss.x) * Math.min(shiftRate * dt, 1),
+        boss.radius,
+        boss.game.width - boss.radius,
+      );
       boss.y = clamp(boss.y + (boss.targetY - boss.y) * dt * (phaseTwo ? 3 : 2), boss.radius, boss.targetY);
       if (boss.weaponTimer <= 0) {
         boss.weaponTimer = scaledInterval(phaseTwo ? 0.75 : 1, boss, { ignorePhase: true });

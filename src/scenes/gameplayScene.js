@@ -78,8 +78,8 @@ const FINAL_SPACE_PALETTE = {
   star: "rgba(255, 102, 160, 0.9)",
 };
 
-const BOSS_ENTRY_DELAY = 10;
-const WAVE_DURATION = 10;
+const BOSS_ENTRY_DELAY = 5;
+const WAVE_DURATION = 5;
 const MISSION_COMPLETE_DURATION = 2;
 const FINAL_BOSS_TRIGGER = 10;
 
@@ -174,7 +174,7 @@ export class GameplayScene {
     this.spawnDelay = randRange(...STAGES[this.stageIndex].spawnDelay) * this.difficulty.spawnDelayMultiplier;
     this.game.audio.setMusicStage(0);
     this.setLevelBanner({
-      text: `Level ${this.levelNumber}`,
+      text: `Stage ${this.levelNumber}`,
       subtitle: initialStage.name,
     });
   }
@@ -473,12 +473,12 @@ export class GameplayScene {
     this.game.audio.setMusicStage(this.stageIndex);
     this.bossSpawned = false;
     this.bossWarningTimer = 0;
-    let subtitle = `Level ${this.levelNumber}: ${stage.name}`;
+    let subtitle = `Stage ${this.levelNumber}: ${stage.name}`;
     if (this.stageIndex === previousIndex && previousIndex === STAGES.length - 1) {
       subtitle = `${stage.name} — Final Push`;
     }
     this.setLevelBanner({
-      text: "晉級到下一個 LEVEL",
+      text: "晉級到下一個 STAGE",
       subtitle,
     });
   }
@@ -1257,13 +1257,13 @@ export class GameplayScene {
     const gaugeHeight = 6;
     const totalGaugeWidth = gaugeSegments * gaugeWidth + (gaugeSegments - 1) * gaugeSpacing;
     const gaugeStartX = width - 12 - totalGaugeWidth;
-    const gaugeY = height - 22;
+    const gaugeY = height - 16;
     ctx.save();
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.font = `600 ${Math.max(9, this.game.width * 0.015)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillStyle = gaugeInactive ? "rgba(255, 255, 255, 0.38)" : "rgba(255, 255, 255, 0.78)";
-    ctx.fillText(weaponInfo.label, gaugeStartX - 10, gaugeY + gaugeHeight / 2);
+    ctx.fillText(weaponInfo.label, gaugeStartX - 10, gaugeY + gaugeHeight / 2 + 3);
     ctx.restore();
     for (let i = 0; i < gaugeSegments; i += 1) {
       const filled = i < weaponInfo.gaugeLevel;
