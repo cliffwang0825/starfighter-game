@@ -10,6 +10,7 @@ export class TitleScene {
     this.options = DIFFICULTY_PRESETS;
     this.optionLayout = [];
     this.focusIndex = 0;
+    this.buttonScale = 0.8;
     this.playerOptions = [
       { label: "1 PILOT", description: "Solo flight", count: 1 },
       { label: "2 PILOTS", description: "Wingmate engaged", count: 2 },
@@ -127,9 +128,13 @@ export class TitleScene {
 
     const best = this.game.storage.bestScore;
     if (best > 0) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
       ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
       ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
-      ctx.fillText(`Best score: ${best}`, this.game.width / 2, this.game.height * 0.84);
+      ctx.fillText(`Best score: ${best}`, this.game.width / 2, this.game.height * 0.08);
+      ctx.restore();
     }
 
     if (this.instructionsVisible) {
@@ -255,9 +260,10 @@ export class TitleScene {
   calculateOptionLayout() {
     const count = this.options.length;
     if (count === 0) return [];
-    const optionWidth = Math.min(208, this.game.width * 0.24);
-    const optionHeight = Math.max(74, this.game.height * 0.11);
-    const gap = Math.min(26, this.game.width * 0.034);
+    const scale = this.buttonScale;
+    const optionWidth = Math.min(208, this.game.width * 0.24) * scale;
+    const optionHeight = Math.max(74, this.game.height * 0.11) * scale;
+    const gap = Math.min(26, this.game.width * 0.034) * scale;
     const totalWidth = count * optionWidth + (count - 1) * gap;
     const startX = (this.game.width - totalWidth) / 2;
     const y = this.game.height * 0.57;
@@ -276,15 +282,16 @@ export class TitleScene {
   calculatePlayerLayout() {
     const count = this.playerOptions.length;
     if (count === 0) return [];
-    const optionWidth = Math.min(188, this.game.width * 0.26);
-    const optionHeight = Math.max(68, this.game.height * 0.1);
-    const gap = Math.min(24, this.game.width * 0.032);
+    const scale = this.buttonScale;
+    const optionWidth = Math.min(188, this.game.width * 0.26) * scale;
+    const optionHeight = Math.max(68, this.game.height * 0.1) * scale;
+    const gap = Math.min(24, this.game.width * 0.032) * scale;
     const totalWidth = count * optionWidth + (count - 1) * gap;
     const startX = (this.game.width - totalWidth) / 2;
-    const diffHeight = Math.max(74, this.game.height * 0.11);
+    const diffHeight = Math.max(74, this.game.height * 0.11) * scale;
     const diffY = this.game.height * 0.57;
     const diffBottom = diffY + diffHeight;
-    const minY = diffBottom + Math.min(40, this.game.height * 0.06);
+    const minY = diffBottom + Math.min(40, this.game.height * 0.06) * scale;
     const y = Math.max(this.game.height * 0.7, minY);
     const layout = [];
     for (let i = 0; i < count; i += 1) {
@@ -299,9 +306,10 @@ export class TitleScene {
   }
 
   calculateInstructionButton() {
-    const width = Math.min(280, this.game.width * 0.5);
-    const height = Math.max(48, this.game.height * 0.075);
-    const margin = Math.max(20, this.game.height * 0.045);
+    const scale = this.buttonScale;
+    const width = Math.min(280, this.game.width * 0.5) * scale;
+    const height = Math.max(48, this.game.height * 0.075) * scale;
+    const margin = Math.max(20, this.game.height * 0.045) * scale;
     const x = (this.game.width - width) / 2;
     const y = this.game.height - height - margin;
     return { x, y, width, height };
@@ -336,11 +344,12 @@ export class TitleScene {
       ctx.fill();
       ctx.stroke();
 
+      const scale = this.buttonScale;
       ctx.fillStyle = selected ? "#6fdcff" : "rgba(214, 232, 255, 0.86)";
-      ctx.font = `700 ${Math.max(20, this.game.width * 0.032)}px 'Orbitron', 'Segoe UI', sans-serif`;
+      ctx.font = `700 ${Math.max(20 * scale, this.game.width * 0.032 * scale)}px 'Orbitron', 'Segoe UI', sans-serif`;
       ctx.fillText(option.label, rect.width / 2, rect.height * 0.42);
       ctx.fillStyle = "rgba(224, 236, 255, 0.7)";
-      ctx.font = `400 ${Math.max(13, this.game.width * 0.021)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.font = `400 ${Math.max(13 * scale, this.game.width * 0.021 * scale)}px 'Inter', 'Segoe UI', sans-serif`;
       ctx.fillText(option.description, rect.width / 2, rect.height * 0.73);
       ctx.restore();
     }
@@ -388,7 +397,7 @@ export class TitleScene {
     ctx.stroke();
 
     ctx.fillStyle = selected ? "rgba(34, 60, 92, 0.95)" : "rgba(32, 48, 70, 0.9)";
-    ctx.font = `700 ${Math.max(18, this.game.width * 0.03)}px 'Orbitron', 'Segoe UI', sans-serif`;
+    ctx.font = `700 ${Math.max(18 * this.buttonScale, this.game.width * 0.03 * this.buttonScale)}px 'Orbitron', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("INSTRUCTION", rect.width / 2, rect.height / 2);
@@ -481,11 +490,12 @@ export class TitleScene {
       drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 14, 18);
       ctx.fill();
       ctx.stroke();
+      const scale = this.buttonScale;
       ctx.fillStyle = selected ? accentHex : "rgba(227, 236, 255, 0.86)";
-      ctx.font = `700 ${Math.max(18, this.game.width * 0.03)}px 'Orbitron', 'Segoe UI', sans-serif`;
+      ctx.font = `700 ${Math.max(18 * scale, this.game.width * 0.03 * scale)}px 'Orbitron', 'Segoe UI', sans-serif`;
       ctx.fillText(option.label, rect.width / 2, rect.height * 0.44);
       ctx.fillStyle = "rgba(224, 236, 255, 0.72)";
-      ctx.font = `400 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
+      ctx.font = `400 ${Math.max(12 * scale, this.game.width * 0.02 * scale)}px 'Inter', 'Segoe UI', sans-serif`;
       ctx.fillText(option.description, rect.width / 2, rect.height * 0.72);
       ctx.restore();
     }
