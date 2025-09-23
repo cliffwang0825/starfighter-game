@@ -14,11 +14,10 @@ export class Player {
     this.moveSmoothing = 0.25;
     this.baseFireCooldown = 0.12;
     this.fireCooldown = this.baseFireCooldown;
-    this.weaponMode = "canon";
+    this.weaponMode = "spread";
     this.weaponLevel = 1;
     this.weaponLevels = {
-      canon: 1,
-      spread: 0,
+      spread: 1,
       laser: 0,
     };
     this.speedBoostTimer = 0;
@@ -40,10 +39,9 @@ export class Player {
     this.velocityY = 0;
     this.fireTimer = 0;
     this.health = this.maxHealth;
-    this.weaponMode = "canon";
+    this.weaponMode = "spread";
     this.weaponLevels = {
-      canon: 1,
-      spread: 0,
+      spread: 1,
       laser: 0,
     };
     this.weaponLevel = this.weaponLevels[this.weaponMode];
@@ -164,46 +162,6 @@ export class Player {
             owner: this.playerIndex,
           });
         }
-      } else if (this.weaponMode === "canon") {
-        const canonLevel = Math.max(1, activeLevel);
-        const boltSpeed = -700 - canonLevel * 40;
-        const boltRadius = 5 + canonLevel;
-        const boltDamage = canonLevel >= 3 ? 4 : canonLevel === 2 ? 3 : 2;
-        const spreadOffsets = canonLevel >= 3 ? [-14, 0, 14] : [-8, 8];
-        for (const offset of spreadOffsets) {
-          fired.push({
-            x: this.x + offset,
-            y: this.y - this.radius - 6,
-            velocityY: boltSpeed,
-            velocityX: 0,
-            radius: boltRadius,
-            friendly: true,
-            damage: boltDamage,
-            owner: this.playerIndex,
-            type: "canon",
-          });
-        }
-        if (canonLevel >= 2) {
-          const missileCount = canonLevel >= 3 ? 2 : 1;
-          const missileOffsets = missileCount === 2 ? [-18, 18] : [0];
-          missileOffsets.forEach((offset) => {
-            fired.push({
-              x: this.x + offset,
-              y: this.y - this.radius - 2,
-              velocityY: -320,
-              velocityX: 0,
-              radius: 7,
-              friendly: true,
-              damage: canonLevel >= 3 ? 4 : 3,
-              owner: this.playerIndex,
-              type: "missile",
-              homing: {
-                turnRate: 5 + canonLevel * 0.8,
-                speed: 420 + canonLevel * 40,
-              },
-            });
-          });
-        }
       }
       if (fired.length > 0) {
         this.game.audio.playShot();
@@ -223,16 +181,13 @@ export class Player {
     } else if (this.weaponMode === "laser") {
       const presets = [this.baseFireCooldown, 0.24, 0.2, 0.16];
       cooldown = presets[storedLevel] ?? 0.16;
-    } else if (this.weaponMode === "canon") {
-      const presets = [this.baseFireCooldown, 0.14, 0.12, 0.1];
-      cooldown = presets[storedLevel] ?? 0.1;
     }
     if (this.speedBoostTimer > 0) {
       cooldown *= 0.72;
     }
     this.fireCooldown = Math.max(0.08, cooldown);
     if (this.weaponLevels) {
-      const mode = this.weaponMode ?? "canon";
+      const mode = this.weaponMode ?? "spread";
       this.weaponLevels[mode] = this.getStoredWeaponLevel();
       this.weaponLevel = this.weaponLevels[mode];
     }
@@ -257,12 +212,6 @@ export class Player {
         return "bomb";
       case "speed":
         this.speedBoostTimer = 8;
-        this.updateDerivedStats();
-        break;
-      case "canon":
-        this.weaponLevels.canon = Math.min(3, this.weaponLevels.canon + 1);
-        this.weaponMode = "canon";
-        this.weaponLevel = this.weaponLevels.canon;
         this.updateDerivedStats();
         break;
       case "spread": {
@@ -310,7 +259,7 @@ export class Player {
   }
 
   getStoredWeaponLevel() {
-    const mode = this.weaponMode ?? "canon";
+    const mode = this.weaponMode ?? "spread";
     const stored = this.weaponLevels?.[mode];
     const value = stored == null ? this.weaponLevel : stored;
     const clamped = Math.max(0, Math.min(3, Math.round(value || 0)));
@@ -319,8 +268,6 @@ export class Player {
 
   getWeaponLabel() {
     switch (this.weaponMode) {
-      case "canon":
-        return "CANON";
       case "spread":
         return "SPREAD";
       case "laser":

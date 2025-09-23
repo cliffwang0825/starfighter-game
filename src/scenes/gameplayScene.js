@@ -427,7 +427,7 @@ export class GameplayScene {
 
   dropBossRewards() {
     if (!this.boss) return;
-    for (const type of ["bomb", "canon", "spread", "laser", "speed", "shield", "health"]) {
+    for (const type of ["bomb", "spread", "laser", "speed", "shield", "health"]) {
       this.powerUps.push(
         new PowerUp({
           x: this.boss.x + randRange(-60, 60),
@@ -472,7 +472,7 @@ export class GameplayScene {
             amplitude: 18,
             frequency: 2.1,
             fireCooldown: 2.3,
-            dropType: i === 2 ? randChoice(["canon", "spread", "health"]) : null,
+            dropType: i === 2 ? randChoice(["spread", "laser", "health"]) : null,
           }),
         );
       }
@@ -486,7 +486,7 @@ export class GameplayScene {
             amplitude: 46,
             frequency: 2.6 + i * 0.4,
             fireCooldown: 1.8,
-            dropType: i === lanes - 1 ? randChoice(["speed", "canon", "spread"]) : null,
+            dropType: i === lanes - 1 ? randChoice(["speed", "spread", "laser"]) : null,
           }),
         );
       }
@@ -499,7 +499,7 @@ export class GameplayScene {
             y: -i * 50 - 70,
             amplitude: 0,
             fireCooldown: 1.5,
-            dropType: i === 0 ? "bomb" : i === count - 1 ? randChoice(["canon", "spread"]) : null,
+            dropType: i === 0 ? "bomb" : i === count - 1 ? randChoice(["spread", "laser"]) : null,
           }),
         );
       }
@@ -554,7 +554,7 @@ export class GameplayScene {
             fireCooldown: 1.1,
             burst: 3,
             scoreValue: 220,
-            dropType: i === 1 ? randChoice(["speed", "canon", "spread", "health"]) : null,
+            dropType: i === 1 ? randChoice(["speed", "spread", "laser", "health"]) : null,
           }),
         );
       }
@@ -577,7 +577,7 @@ export class GameplayScene {
         burst: 3,
         burstSpread: 0.35,
         health: 5,
-        dropType: randChoice(["spread", "canon"]),
+        dropType: randChoice(["spread", "laser"]),
       });
       this.enemies.push(left, right);
     }
@@ -596,7 +596,7 @@ export class GameplayScene {
             frequency: 4.4,
             fireCooldown: 1.1,
             burst: 3,
-            dropType: i % 3 === 0 ? randChoice(["speed", "shield", "laser", "canon", "health"]) : null,
+            dropType: i % 3 === 0 ? randChoice(["speed", "shield", "laser", "spread", "health"]) : null,
           }),
         );
       }
@@ -612,7 +612,7 @@ export class GameplayScene {
             fireCooldown: 0.95,
             burst: 4,
             burstSpread: 0.4,
-            dropType: i === 2 ? randChoice(["bomb", "canon", "laser"]) : null,
+            dropType: i === 2 ? randChoice(["bomb", "spread", "laser"]) : null,
           }),
         );
       }
@@ -630,7 +630,7 @@ export class GameplayScene {
             wobbleFrequency: 1.1,
             health: 5,
             scoreValue: 260,
-            dropType: i === 2 ? randChoice(["bomb", "canon", "spread"]) : null,
+            dropType: i === 2 ? randChoice(["bomb", "spread", "laser"]) : null,
           }),
         );
       }
@@ -651,7 +651,7 @@ export class GameplayScene {
               i === 1
                 ? "laser"
                 : i === 0
-                ? randChoice(["canon", "spread", "speed"])
+                ? randChoice(["spread", "laser", "speed"])
                 : i === 2
                 ? "health"
                 : null,
@@ -729,7 +729,7 @@ export class GameplayScene {
             if (enemy.dropType) {
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: enemy.dropType }));
             } else if (Math.random() < 0.016) {
-              const types = ["bomb", "canon", "spread", "laser", "speed", "shield", "health"];
+              const types = ["bomb", "spread", "laser", "speed", "shield", "health"];
               this.powerUps.push(new PowerUp({ x: enemy.x, y: enemy.y, type: randChoice(types) }));
             }
           }
@@ -1045,8 +1045,6 @@ export class GameplayScene {
       ? "#ff5b6a"
       : weaponInfo.mode === "laser"
       ? "#64a2ff"
-      : weaponInfo.mode === "canon"
-      ? "#ffd36f"
       : accent;
     for (let i = 0; i < gaugeSegments; i += 1) {
       const filled = i < weaponInfo.gaugeLevel;

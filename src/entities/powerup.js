@@ -7,7 +7,6 @@ const PALETTE = {
   laser: { base: "#9f87ff", glow: "#e3dcff", stroke: "#4d3ab3", detail: "#f3f0ff" },
   shield: { base: "#6fb3ff", glow: "#c9e4ff", stroke: "#2d6cb2", detail: "#eff7ff" },
   health: { base: "#ff6d7a", glow: "#ffb6bf", stroke: "#9e2a34", detail: "#ffe5e8" },
-  canon: { base: "#ffc96b", glow: "#ffe7b4", stroke: "#a36b1a", detail: "#fff6df" },
 };
 
 export class PowerUp {
@@ -84,9 +83,6 @@ function drawPowerupIcon(ctx, type, palette) {
       break;
     case "laser":
       drawLaserIcon(ctx, palette);
-      break;
-    case "canon":
-      drawCanonIcon(ctx, palette);
       break;
     case "health":
       drawHealthIcon(ctx, palette);

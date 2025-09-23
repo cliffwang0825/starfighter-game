@@ -25,8 +25,7 @@ export function renderBullets(ctx, bullets) {
     const angle = Math.atan2(-vy, vx);
     ctx.rotate(isNaN(angle) ? 0 : angle + Math.PI / 2);
     const isLaser = bullet.type === "laser";
-    const isMissile = bullet.type === "missile";
-    const length = bullet.radius * (isLaser ? 3.6 : isMissile ? 2.8 : 2.2);
+    const length = bullet.radius * (isLaser ? 3.6 : 2.2);
     const gradient = ctx.createLinearGradient(0, -length, 0, length);
     if (bullet.friendly) {
       if (isLaser) {
@@ -34,10 +33,6 @@ export function renderBullets(ctx, bullets) {
         gradient.addColorStop(0.3, "#d4f3ff");
         gradient.addColorStop(0.7, "#64e1ff");
         gradient.addColorStop(1, "#1aa3ff");
-      } else if (isMissile) {
-        gradient.addColorStop(0, "#fff2d8");
-        gradient.addColorStop(0.5, "#ffc977");
-        gradient.addColorStop(1, "#ff8f2b");
       } else {
         gradient.addColorStop(0, "#ffffff");
         gradient.addColorStop(0.4, "#8ef0ff");
@@ -50,7 +45,7 @@ export function renderBullets(ctx, bullets) {
     }
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    const width = bullet.radius * (isLaser ? 0.55 : isMissile ? 0.7 : 0.8);
+    const width = bullet.radius * (isLaser ? 0.55 : 0.8);
     ctx.ellipse(0, 0, width, length, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
