@@ -11,8 +11,8 @@ export class TitleScene {
     this.optionLayout = [];
     this.focusIndex = 0;
     this.playerOptions = [
-      { label: "1 PILOT", description: "單人任務", count: 1 },
-      { label: "2 PILOTS", description: "協同出擊", count: 2 },
+      { label: "1 PILOT", description: "Solo flight", count: 1 },
+      { label: "2 PILOTS", description: "Wingmate engaged", count: 2 },
     ];
     this.playerModeIndex = 0;
     this.playerLayout = [];
@@ -123,14 +123,13 @@ export class TitleScene {
 
     this.renderDifficultyOptions(ctx, this.focusIndex === 0);
     this.renderPlayerOptions(ctx, this.focusIndex === 1);
-    this.renderSelectionHeaders(ctx);
     this.renderInstructionButton(ctx);
 
     const best = this.game.storage.bestScore;
     if (best > 0) {
       ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
       ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
-      ctx.fillText(`Best score: ${best}`, this.game.width / 2, this.game.height * 0.9);
+      ctx.fillText(`Best score: ${best}`, this.game.width / 2, this.game.height * 0.84);
     }
 
     if (this.instructionsVisible) {
@@ -302,7 +301,7 @@ export class TitleScene {
   calculateInstructionButton() {
     const width = Math.min(280, this.game.width * 0.5);
     const height = Math.max(48, this.game.height * 0.075);
-    const margin = Math.max(26, this.game.height * 0.06);
+    const margin = Math.max(20, this.game.height * 0.045);
     const x = (this.game.width - width) / 2;
     const y = this.game.height - height - margin;
     return { x, y, width, height };
@@ -353,30 +352,46 @@ export class TitleScene {
     ctx.save();
     ctx.translate(rect.x, rect.y);
     const selected = this.instructionsVisible;
-    const gradient = ctx.createLinearGradient(0, 0, rect.width, 0);
-    gradient.addColorStop(0, selected ? "rgba(122, 231, 255, 0.5)" : "rgba(74, 142, 255, 0.28)");
-    gradient.addColorStop(1, selected ? "rgba(52, 186, 255, 0.4)" : "rgba(62, 206, 255, 0.24)");
+    const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+    gradient.addColorStop(0, selected ? "rgba(210, 236, 255, 0.85)" : "rgba(210, 210, 215, 0.78)");
+    gradient.addColorStop(0.32, selected ? "rgba(244, 250, 255, 0.96)" : "rgba(248, 248, 250, 0.92)");
+    gradient.addColorStop(0.65, selected ? "rgba(168, 194, 214, 0.88)" : "rgba(160, 168, 184, 0.82)");
+    gradient.addColorStop(1, selected ? "rgba(128, 150, 170, 0.9)" : "rgba(118, 130, 148, 0.78)");
     ctx.fillStyle = gradient;
-    ctx.strokeStyle = selected ? "rgba(148, 242, 255, 0.95)" : "rgba(92, 218, 255, 0.7)";
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = selected ? "rgba(196, 238, 255, 0.95)" : "rgba(162, 190, 210, 0.8)";
+    ctx.lineWidth = selected ? 2.8 : 2;
     drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 18, 28);
     ctx.fill();
     ctx.stroke();
 
     ctx.save();
-    drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 18, 28);
+    drawCutCornerRect(ctx, 3, 3, rect.width - 6, rect.height - 6, 14, 22);
     ctx.clip();
-    ctx.fillStyle = "rgba(11, 28, 48, 0.9)";
-    ctx.globalCompositeOperation = "lighter";
-    ctx.fillRect(rect.width * 0.12, rect.height * 0.24, rect.width * 0.76, rect.height * 0.52);
-    ctx.restore();
-    ctx.globalCompositeOperation = "source-over";
+    const sheen = ctx.createLinearGradient(0, 0, rect.width, 0);
+    sheen.addColorStop(0, "rgba(255, 255, 255, 0.18)");
+    sheen.addColorStop(0.5, "rgba(255, 255, 255, 0.45)");
+    sheen.addColorStop(0.75, "rgba(255, 255, 255, 0.12)");
+    sheen.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, rect.width, rect.height * 0.55);
 
-    ctx.fillStyle = "rgba(234, 248, 255, 0.9)";
+    const shadow = ctx.createLinearGradient(0, rect.height * 0.45, 0, rect.height);
+    shadow.addColorStop(0, "rgba(0, 0, 0, 0)");
+    shadow.addColorStop(1, "rgba(0, 0, 0, 0.28)");
+    ctx.fillStyle = shadow;
+    ctx.fillRect(0, rect.height * 0.45, rect.width, rect.height * 0.55);
+    ctx.restore();
+
+    ctx.strokeStyle = selected ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.5)";
+    ctx.lineWidth = 1;
+    drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 18, 28);
+    ctx.stroke();
+
+    ctx.fillStyle = selected ? "rgba(34, 60, 92, 0.95)" : "rgba(32, 48, 70, 0.9)";
     ctx.font = `700 ${Math.max(18, this.game.width * 0.03)}px 'Orbitron', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("INSTRUCTIONS", rect.width / 2, rect.height / 2);
+    ctx.fillText("INSTRUCTION", rect.width / 2, rect.height / 2);
     ctx.restore();
   }
 
@@ -406,7 +421,7 @@ export class TitleScene {
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(224, 244, 255, 0.95)";
     ctx.font = `700 ${Math.max(20, this.game.width * 0.032)}px 'Orbitron', 'Segoe UI', sans-serif`;
-    ctx.fillText("操作與提示", this.game.width / 2, y + 60);
+    ctx.fillText("Controls & Tips", this.game.width / 2, y + 60);
 
     ctx.font = `400 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "left";
@@ -414,12 +429,12 @@ export class TitleScene {
     const startX = x + 40;
     let cursorY = y + 116;
     const lines = [
-      "P1：W/A/S/D 移動，V 投擲炸彈",
-      "P2：方向鍵移動，/ 鍵投擲炸彈",
-      "自動射擊啟動，可雙擊觸控或按炸彈鍵觸發清場",
-      "P 鍵暫停，R 鍵重來，Esc 返回主選單",
-      "M 鍵切換背景音樂，N 鍵切換音效",
-      "手機可拖曳／點擊操作，支援觸控炸彈",
+      "P1: Move with W/A/S/D, drop bombs with V",
+      "P2: Move with arrow keys, drop bombs with /",
+      "Auto-fire is active • Double-tap or press bomb to clear",
+      "Press P to pause, R to restart, Esc to return",
+      "Press M to toggle music, N to toggle SFX",
+      "Touch controls: drag to steer and tap to bomb",
     ];
     ctx.fillStyle = "rgba(216, 234, 255, 0.85)";
     for (const line of lines) {
@@ -430,41 +445,7 @@ export class TitleScene {
     ctx.textAlign = "center";
     ctx.font = `500 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.fillStyle = "rgba(190, 220, 255, 0.65)";
-    ctx.fillText("按 Enter、Space、I 或點擊任意處關閉", this.game.width / 2, y + panelHeight - 40);
-
-    ctx.restore();
-  }
-
-  renderSelectionHeaders(ctx) {
-    ctx.save();
-    ctx.textBaseline = "middle";
-    ctx.font = `600 ${Math.max(14, this.game.width * 0.022)}px 'Orbitron', 'Segoe UI', sans-serif`;
-    ctx.fillStyle = "rgba(160, 220, 255, 0.78)";
-
-    if (this.optionLayout.length > 0) {
-      const rowTop = this.optionLayout[0].y - Math.max(28, this.game.height * 0.05);
-      ctx.textAlign = "left";
-      ctx.fillText(
-        "STELLAR THREAT INDEX",
-        this.optionLayout[0].x,
-        rowTop,
-      );
-      ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(120, 210, 255, 0.65)";
-      const lastDifficulty = this.optionLayout[this.optionLayout.length - 1];
-      ctx.fillText("SELECT MISSION", lastDifficulty.x + lastDifficulty.width, rowTop);
-      ctx.fillStyle = "rgba(160, 220, 255, 0.78)";
-    }
-
-    if (this.playerLayout.length > 0) {
-      const rowTop = this.playerLayout[0].y - Math.max(24, this.game.height * 0.045);
-      ctx.textAlign = "left";
-      ctx.fillText("WING CONFIGURATION", this.playerLayout[0].x, rowTop);
-      ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(120, 210, 255, 0.65)";
-      const lastPlayer = this.playerLayout[this.playerLayout.length - 1];
-      ctx.fillText("DEPLOYMENT ROSTER", lastPlayer.x + lastPlayer.width, rowTop);
-    }
+    ctx.fillText("Press Enter, Space, I or tap anywhere to close", this.game.width / 2, y + panelHeight - 40);
 
     ctx.restore();
   }
