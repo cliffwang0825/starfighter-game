@@ -118,30 +118,12 @@ export class TitleScene {
     this.starfield.render(ctx, this.time * 1000);
 
     ctx.save();
-    ctx.fillStyle = "rgba(8, 12, 22, 0.6)";
-    ctx.fillRect(0, 0, this.game.width, this.game.height);
-
-    ctx.fillStyle = "#5ad1ff";
-    ctx.font = `bold ${Math.max(48, this.game.width * 0.08)}px 'Orbitron', 'Segoe UI', sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(90, 209, 255, 0.7)";
-    ctx.shadowBlur = 24;
-    ctx.fillText("STARFIGHTER", this.game.width / 2, this.game.height * 0.32);
-
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.font = `500 ${Math.max(18, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Vertical Strike Prototype", this.game.width / 2, this.game.height * 0.42);
-
-    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-    ctx.font = `500 ${Math.max(16, this.game.width * 0.026)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Choose difficulty & crew complement", this.game.width / 2, this.game.height * 0.48);
-    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillText("Use ←/→ to cycle, ↑/↓ to change rows or tap a card", this.game.width / 2, this.game.height * 0.515);
+    this.renderBackdrop(ctx);
+    this.renderTitleCluster(ctx);
 
     this.renderDifficultyOptions(ctx, this.focusIndex === 0);
     this.renderPlayerOptions(ctx, this.focusIndex === 1);
+    this.renderSelectionHeaders(ctx);
     this.renderInstructionButton(ctx);
 
     const best = this.game.storage.bestScore;
@@ -154,6 +136,112 @@ export class TitleScene {
     if (this.instructionsVisible) {
       this.renderInstructionOverlay(ctx);
     }
+
+    ctx.restore();
+  }
+
+  renderBackdrop(ctx) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.height);
+    gradient.addColorStop(0, "rgba(2, 6, 18, 0.95)");
+    gradient.addColorStop(0.4, "rgba(4, 12, 32, 0.92)");
+    gradient.addColorStop(1, "rgba(8, 20, 48, 0.94)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.game.width, this.game.height);
+
+    const gridSpacing = Math.max(48, this.game.width * 0.06);
+    const offset = (this.time * 40) % gridSpacing;
+    ctx.strokeStyle = "rgba(90, 209, 255, 0.08)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = -offset; x < this.game.width + gridSpacing; x += gridSpacing) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + this.game.height * 0.08, this.game.height);
+    }
+    for (let y = -offset; y < this.game.height + gridSpacing; y += gridSpacing) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.game.width, y + this.game.width * 0.06);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(140, 226, 255, 0.15)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const ringCount = 3;
+    const maxRadius = Math.hypot(this.game.width, this.game.height) * 0.3;
+    const cx = this.game.width * 0.18;
+    const cy = this.game.height * 0.24;
+    for (let i = 1; i <= ringCount; i += 1) {
+      const radius = (maxRadius / ringCount) * i;
+      ctx.moveTo(cx + radius, cy);
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(190, 220, 255, 0.18)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const diag = Math.max(this.game.width, this.game.height) * 1.2;
+    ctx.moveTo(this.game.width * 0.8, -diag * 0.2);
+    ctx.lineTo(this.game.width * 0.52, this.game.height + diag * 0.25);
+    ctx.moveTo(this.game.width * 0.92, -diag * 0.15);
+    ctx.lineTo(this.game.width * 0.64, this.game.height + diag * 0.22);
+    ctx.stroke();
+  }
+
+  renderTitleCluster(ctx) {
+    const cx = this.game.width / 2;
+    const top = this.game.height * 0.18;
+    const panelWidth = Math.min(this.game.width * 0.82, 720);
+    const panelHeight = Math.min(this.game.height * 0.56, 460);
+    const panelX = (this.game.width - panelWidth) / 2;
+    const panelY = top - this.game.height * 0.04;
+
+    ctx.save();
+    ctx.translate(panelX, panelY);
+
+    ctx.fillStyle = "rgba(8, 18, 40, 0.84)";
+    ctx.strokeStyle = "rgba(102, 212, 255, 0.42)";
+    ctx.lineWidth = 3;
+    drawCutCornerRect(ctx, 0, 0, panelWidth, panelHeight, 28, 40);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(122, 232, 255, 0.25)";
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([8, 10]);
+    drawCutCornerRect(ctx, 12, 12, panelWidth - 24, panelHeight - 24, 22, 30);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const accentWidth = Math.min(180, panelWidth * 0.22);
+    ctx.fillStyle = "rgba(96, 212, 255, 0.2)";
+    ctx.fillRect(accentWidth * 0.3, 24, accentWidth, 4);
+    ctx.fillStyle = "rgba(96, 212, 255, 0.5)";
+    ctx.fillRect(panelWidth - accentWidth * 1.2, 24, accentWidth, 4);
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#7ae0ff";
+    ctx.shadowColor = "rgba(122, 224, 255, 0.8)";
+    ctx.shadowBlur = 28;
+    ctx.font = `900 ${Math.max(54, this.game.width * 0.085)}px 'Orbitron', 'Segoe UI', sans-serif`;
+    ctx.fillText("STARFIGHTER", cx, this.game.height * 0.26);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(221, 241, 255, 0.82)";
+    ctx.font = `600 ${Math.max(20, this.game.width * 0.032)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("INTERSTELLAR STRIKE COMMAND", cx, this.game.height * 0.33);
+
+    ctx.fillStyle = "rgba(211, 236, 255, 0.68)";
+    ctx.font = `400 ${Math.max(16, this.game.width * 0.025)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("Select mission parameters", cx, this.game.height * 0.385);
+
+    ctx.fillStyle = "rgba(190, 218, 255, 0.55)";
+    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillText("Navigate with ← → ↑ ↓  •  Tap to engage  •  Press Enter to launch", cx, this.game.height * 0.425);
 
     ctx.restore();
   }
@@ -212,10 +300,10 @@ export class TitleScene {
   }
 
   calculateInstructionButton() {
-    const width = Math.min(220, this.game.width * 0.32);
-    const height = Math.max(44, this.game.height * 0.07);
-    const margin = Math.max(18, this.game.width * 0.024);
-    const x = this.game.width - width - margin;
+    const width = Math.min(280, this.game.width * 0.5);
+    const height = Math.max(48, this.game.height * 0.075);
+    const margin = Math.max(26, this.game.height * 0.06);
+    const x = (this.game.width - width) / 2;
     const y = this.game.height - height - margin;
     return { x, y, width, height };
   }
@@ -230,26 +318,31 @@ export class TitleScene {
       const selected = i === this.difficultyIndex;
       ctx.save();
       ctx.translate(rect.x, rect.y);
-      ctx.fillStyle = selected
-        ? focused
-          ? "rgba(90, 209, 255, 0.35)"
-          : "rgba(90, 209, 255, 0.24)"
-        : "rgba(255, 255, 255, 0.12)";
+      const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+      if (selected) {
+        gradient.addColorStop(0, "rgba(90, 209, 255, 0.35)");
+        gradient.addColorStop(1, "rgba(90, 209, 255, 0.12)");
+      } else {
+        gradient.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+        gradient.addColorStop(1, "rgba(255, 255, 255, 0.05)");
+      }
+      ctx.fillStyle = gradient;
       ctx.strokeStyle = selected
         ? focused
-          ? "rgba(120, 226, 255, 0.95)"
-          : "rgba(90, 209, 255, 0.85)"
-        : "rgba(255, 255, 255, 0.35)";
-      ctx.lineWidth = selected ? (focused ? 3.2 : 2.2) : 1.6;
-      drawRoundedRect(ctx, 0, 0, rect.width, rect.height, 14);
+          ? "rgba(140, 226, 255, 0.95)"
+          : "rgba(110, 206, 255, 0.8)"
+        : "rgba(140, 178, 255, 0.28)";
+      ctx.lineWidth = selected ? (focused ? 3.4 : 2.4) : 1.6;
+      drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 16, 22);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = selected ? "#5ad1ff" : "rgba(255, 255, 255, 0.82)";
-      ctx.font = `600 ${Math.max(20, this.game.width * 0.03)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.label, rect.width / 2, rect.height * 0.4);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+
+      ctx.fillStyle = selected ? "#6fdcff" : "rgba(214, 232, 255, 0.86)";
+      ctx.font = `700 ${Math.max(20, this.game.width * 0.032)}px 'Orbitron', 'Segoe UI', sans-serif`;
+      ctx.fillText(option.label, rect.width / 2, rect.height * 0.42);
+      ctx.fillStyle = "rgba(224, 236, 255, 0.7)";
       ctx.font = `400 ${Math.max(13, this.game.width * 0.021)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.description, rect.width / 2, rect.height * 0.7);
+      ctx.fillText(option.description, rect.width / 2, rect.height * 0.73);
       ctx.restore();
     }
     ctx.restore();
@@ -260,29 +353,27 @@ export class TitleScene {
     ctx.save();
     ctx.translate(rect.x, rect.y);
     const selected = this.instructionsVisible;
-    const gradient = ctx.createLinearGradient(0, 0, 0, rect.height);
-    gradient.addColorStop(0, selected ? "rgba(90, 209, 255, 0.35)" : "rgba(255, 255, 255, 0.18)");
-    gradient.addColorStop(1, selected ? "rgba(90, 209, 255, 0.2)" : "rgba(255, 255, 255, 0.08)");
+    const gradient = ctx.createLinearGradient(0, 0, rect.width, 0);
+    gradient.addColorStop(0, selected ? "rgba(122, 231, 255, 0.5)" : "rgba(74, 142, 255, 0.28)");
+    gradient.addColorStop(1, selected ? "rgba(52, 186, 255, 0.4)" : "rgba(62, 206, 255, 0.24)");
     ctx.fillStyle = gradient;
-    ctx.strokeStyle = selected ? "rgba(120, 226, 255, 0.95)" : "rgba(255, 255, 255, 0.48)";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    const radius = 14;
-    ctx.moveTo(radius, 0);
-    ctx.lineTo(rect.width - radius, 0);
-    ctx.quadraticCurveTo(rect.width, 0, rect.width, radius);
-    ctx.lineTo(rect.width, rect.height - radius);
-    ctx.quadraticCurveTo(rect.width, rect.height, rect.width - radius, rect.height);
-    ctx.lineTo(radius, rect.height);
-    ctx.quadraticCurveTo(0, rect.height, 0, rect.height - radius);
-    ctx.lineTo(0, radius);
-    ctx.quadraticCurveTo(0, 0, radius, 0);
-    ctx.closePath();
+    ctx.strokeStyle = selected ? "rgba(148, 242, 255, 0.95)" : "rgba(92, 218, 255, 0.7)";
+    ctx.lineWidth = 2.2;
+    drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 18, 28);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
-    ctx.font = `600 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.save();
+    drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 18, 28);
+    ctx.clip();
+    ctx.fillStyle = "rgba(11, 28, 48, 0.9)";
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillRect(rect.width * 0.12, rect.height * 0.24, rect.width * 0.76, rect.height * 0.52);
+    ctx.restore();
+    ctx.globalCompositeOperation = "source-over";
+
+    ctx.fillStyle = "rgba(234, 248, 255, 0.9)";
+    ctx.font = `700 ${Math.max(18, this.game.width * 0.03)}px 'Orbitron', 'Segoe UI', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("INSTRUCTIONS", rect.width / 2, rect.height / 2);
@@ -291,42 +382,37 @@ export class TitleScene {
 
   renderInstructionOverlay(ctx) {
     ctx.save();
-    ctx.fillStyle = "rgba(6, 10, 20, 0.86)";
+    ctx.fillStyle = "rgba(4, 8, 18, 0.9)";
     ctx.fillRect(0, 0, this.game.width, this.game.height);
 
-    const panelWidth = Math.min(this.game.width * 0.8, 520);
-    const panelHeight = Math.min(this.game.height * 0.7, 420);
+    const panelWidth = Math.min(this.game.width * 0.8, 540);
+    const panelHeight = Math.min(this.game.height * 0.72, 440);
     const x = (this.game.width - panelWidth) / 2;
     const y = (this.game.height - panelHeight) / 2;
 
-    ctx.fillStyle = "rgba(18, 26, 42, 0.85)";
-    ctx.strokeStyle = "rgba(120, 226, 255, 0.9)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const radius = 22;
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + panelWidth - radius, y);
-    ctx.quadraticCurveTo(x + panelWidth, y, x + panelWidth, y + radius);
-    ctx.lineTo(x + panelWidth, y + panelHeight - radius);
-    ctx.quadraticCurveTo(x + panelWidth, y + panelHeight, x + panelWidth - radius, y + panelHeight);
-    ctx.lineTo(x + radius, y + panelHeight);
-    ctx.quadraticCurveTo(x, y + panelHeight, x, y + panelHeight - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
+    ctx.fillStyle = "rgba(12, 24, 44, 0.92)";
+    ctx.strokeStyle = "rgba(130, 236, 255, 0.9)";
+    ctx.lineWidth = 2.4;
+    drawCutCornerRect(ctx, x, y, panelWidth, panelHeight, 26, 36);
     ctx.fill();
     ctx.stroke();
 
+    ctx.strokeStyle = "rgba(120, 220, 255, 0.4)";
+    ctx.setLineDash([10, 12]);
+    drawCutCornerRect(ctx, x + 14, y + 14, panelWidth - 28, panelHeight - 28, 20, 28);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-    ctx.font = `600 ${Math.max(20, this.game.width * 0.032)}px 'Orbitron', 'Segoe UI', sans-serif`;
-    ctx.fillText("操作與提示", this.game.width / 2, y + 56);
+    ctx.fillStyle = "rgba(224, 244, 255, 0.95)";
+    ctx.font = `700 ${Math.max(20, this.game.width * 0.032)}px 'Orbitron', 'Segoe UI', sans-serif`;
+    ctx.fillText("操作與提示", this.game.width / 2, y + 60);
 
     ctx.font = `400 ${Math.max(16, this.game.width * 0.024)}px 'Inter', 'Segoe UI', sans-serif`;
     ctx.textAlign = "left";
     const lineHeight = Math.max(28, this.game.height * 0.04);
-    const startX = x + 36;
-    let cursorY = y + 108;
+    const startX = x + 40;
+    let cursorY = y + 116;
     const lines = [
       "P1：W/A/S/D 移動，V 投擲炸彈",
       "P2：方向鍵移動，/ 鍵投擲炸彈",
@@ -335,16 +421,50 @@ export class TitleScene {
       "M 鍵切換背景音樂，N 鍵切換音效",
       "手機可拖曳／點擊操作，支援觸控炸彈",
     ];
-    ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.fillStyle = "rgba(216, 234, 255, 0.85)";
     for (const line of lines) {
       ctx.fillText(line, startX, cursorY);
       cursorY += lineHeight;
     }
 
     ctx.textAlign = "center";
-    ctx.font = `400 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-    ctx.fillText("按 Enter、Space、I 或點擊任意處關閉", this.game.width / 2, y + panelHeight - 36);
+    ctx.font = `500 ${Math.max(14, this.game.width * 0.022)}px 'Inter', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(190, 220, 255, 0.65)";
+    ctx.fillText("按 Enter、Space、I 或點擊任意處關閉", this.game.width / 2, y + panelHeight - 40);
+
+    ctx.restore();
+  }
+
+  renderSelectionHeaders(ctx) {
+    ctx.save();
+    ctx.textBaseline = "middle";
+    ctx.font = `600 ${Math.max(14, this.game.width * 0.022)}px 'Orbitron', 'Segoe UI', sans-serif`;
+    ctx.fillStyle = "rgba(160, 220, 255, 0.78)";
+
+    if (this.optionLayout.length > 0) {
+      const rowTop = this.optionLayout[0].y - Math.max(28, this.game.height * 0.05);
+      ctx.textAlign = "left";
+      ctx.fillText(
+        "STELLAR THREAT INDEX",
+        this.optionLayout[0].x,
+        rowTop,
+      );
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(120, 210, 255, 0.65)";
+      const lastDifficulty = this.optionLayout[this.optionLayout.length - 1];
+      ctx.fillText("SELECT MISSION", lastDifficulty.x + lastDifficulty.width, rowTop);
+      ctx.fillStyle = "rgba(160, 220, 255, 0.78)";
+    }
+
+    if (this.playerLayout.length > 0) {
+      const rowTop = this.playerLayout[0].y - Math.max(24, this.game.height * 0.045);
+      ctx.textAlign = "left";
+      ctx.fillText("WING CONFIGURATION", this.playerLayout[0].x, rowTop);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(120, 210, 255, 0.65)";
+      const lastPlayer = this.playerLayout[this.playerLayout.length - 1];
+      ctx.fillText("DEPLOYMENT ROSTER", lastPlayer.x + lastPlayer.width, rowTop);
+    }
 
     ctx.restore();
   }
@@ -358,29 +478,34 @@ export class TitleScene {
       const rect = layout[i];
       const option = this.playerOptions[i];
       const selected = i === this.playerModeIndex;
-      const accent = option.count === 1 ? "#ff6d8f" : "#7faeff";
+      const accentHex = option.count === 1 ? "#ff6d8f" : "#7faeff";
+      const accentRgb = option.count === 1 ? [255, 109, 143] : [127, 174, 255];
       ctx.save();
       ctx.translate(rect.x, rect.y);
-      ctx.fillStyle = selected
-        ? focused
-          ? `${accent}33`
-          : `${accent}22`
-        : "rgba(255, 255, 255, 0.12)";
+      const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+      if (selected) {
+        gradient.addColorStop(0, `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, 0.28)`);
+        gradient.addColorStop(1, `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, 0.12)`);
+      } else {
+        gradient.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+        gradient.addColorStop(1, "rgba(255, 255, 255, 0.04)");
+      }
+      ctx.fillStyle = gradient;
       ctx.strokeStyle = selected
         ? focused
-          ? `${accent}dd`
-          : `${accent}aa`
-        : "rgba(255, 255, 255, 0.35)";
-      ctx.lineWidth = selected ? (focused ? 2.8 : 2.1) : 1.5;
-      drawRoundedRect(ctx, 0, 0, rect.width, rect.height, 12);
+          ? `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, 0.86)`
+          : `rgba(${accentRgb[0]}, ${accentRgb[1]}, ${accentRgb[2]}, 0.65)`
+        : "rgba(160, 200, 255, 0.28)";
+      ctx.lineWidth = selected ? (focused ? 3 : 2.2) : 1.6;
+      drawCutCornerRect(ctx, 0, 0, rect.width, rect.height, 14, 18);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = selected ? accent : "rgba(255, 255, 255, 0.84)";
-      ctx.font = `600 ${Math.max(18, this.game.width * 0.028)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.label, rect.width / 2, rect.height * 0.42);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+      ctx.fillStyle = selected ? accentHex : "rgba(227, 236, 255, 0.86)";
+      ctx.font = `700 ${Math.max(18, this.game.width * 0.03)}px 'Orbitron', 'Segoe UI', sans-serif`;
+      ctx.fillText(option.label, rect.width / 2, rect.height * 0.44);
+      ctx.fillStyle = "rgba(224, 236, 255, 0.72)";
       ctx.font = `400 ${Math.max(12, this.game.width * 0.02)}px 'Inter', 'Segoe UI', sans-serif`;
-      ctx.fillText(option.description, rect.width / 2, rect.height * 0.7);
+      ctx.fillText(option.description, rect.width / 2, rect.height * 0.72);
       ctx.restore();
     }
     ctx.restore();
@@ -396,16 +521,17 @@ export class TitleScene {
   }
 }
 
-function drawRoundedRect(ctx, x, y, width, height, radius) {
+function drawCutCornerRect(ctx, x, y, width, height, radius, cut) {
   const r = Math.min(radius, width / 2, height / 2);
+  const c = Math.min(cut, width / 3, height / 3);
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + width - r, y);
   ctx.quadraticCurveTo(x + width, y, x + width, y + r);
   ctx.lineTo(x + width, y + height - r);
   ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-  ctx.lineTo(x + r, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x + c, y + height);
+  ctx.lineTo(x, y + height - c);
   ctx.lineTo(x, y + r);
   ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
